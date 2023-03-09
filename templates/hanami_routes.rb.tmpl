@@ -1,0 +1,6 @@
+module {{.AppName}}
+    class Routes < Hanami::Routes
+        {{range .OperationDefinitions}}{{.Method | lower}} "{{.Path}}", to: "{{index .Spec.Tags 0}}.{{.OperationId | toSnake}}"
+        {{end}}
+    end
+end

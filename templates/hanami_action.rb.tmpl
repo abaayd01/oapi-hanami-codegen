@@ -1,0 +1,11 @@
+module {{.AppName}}
+    module Actions
+        module {{.ModuleName | ucFirst}}
+            class {{.ActionName}} < {{.AppName}}::Action
+                def handle(request, response)
+                    response.body = "Hello from {{.AppName}}/{{.ModuleName}}/{{.ActionName}}"
+                end
+            end
+        end
+    end
+end
