@@ -9,6 +9,7 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 	"log"
 	"os"
+	"regexp"
 	"text/template"
 )
 
@@ -123,15 +124,48 @@ var TemplateFunctions = merge(codegen.TemplateFunctions, template.FuncMap{
 	"toSnake": toSnake,
 })
 
-type RoutesTemplateModel struct {
-	AppName              string
-	OperationDefinitions []codegen.OperationDefinition
+type RoutesFileTemplateModel struct {
+	AppName string
+	Routes  []RouteTemplateModel
 }
 
-func (g Generator) GenerateRoutes(swagger *openapi3.T) (*bytes.Buffer, error) {
+type RouteTemplateModel struct {
+	Path                string
+	OperationDefinition codegen.OperationDefinition
+}
+
+// toRackPath converts a path definition as given by OpenAPI spec to something Rack understands.
+// For example "/users/{user_id}" -> "/users/:user_id"
+func toRackPath(codegenPath string) string {
+	re := regexp.MustCompile("{(.*?)}")
+	out := re.ReplaceAllString(codegenPath, ":$1")
+	return out
+}
+
+func (g Generator) GenerateRoutesFileTemplateModel(swagger *openapi3.T) (*RoutesFileTemplateModel, error) {
 	ops, err := codegen.OperationDefinitions(swagger)
 	if err != nil {
 		return nil, fmt.Errorf("error generating operation definitions: %w", err)
+	}
+
+	var routeTemplateModels []RouteTemplateModel
+	for _, op := range ops {
+		routeTemplateModels = append(routeTemplateModels, RouteTemplateModel{
+			Path:                toRackPath(op.Path),
+			OperationDefinition: op,
+		})
+	}
+
+	return &RoutesFileTemplateModel{
+		AppName: g.AppName,
+		Routes:  routeTemplateModels,
+	}, nil
+}
+
+func (g Generator) GenerateRoutes(swagger *openapi3.T) (*bytes.Buffer, error) {
+	routesFileTemplateModel, err := g.GenerateRoutesFileTemplateModel(swagger)
+	if err != nil {
+		return nil, fmt.Errorf("error generating routes file template model: %w", err)
 	}
 
 	tmpl, err := template.New("hanami-codegen").Funcs(TemplateFunctions).ParseFiles("./templates/hanami_routes.rb.tmpl")
@@ -141,10 +175,7 @@ func (g Generator) GenerateRoutes(swagger *openapi3.T) (*bytes.Buffer, error) {
 
 	var buf bytes.Buffer
 	w := bufio.NewWriter(&buf)
-	if err = tmpl.ExecuteTemplate(w, "hanami_routes.rb.tmpl", RoutesTemplateModel{
-		AppName:              g.AppName,
-		OperationDefinitions: ops,
-	}); err != nil {
+	if err = tmpl.ExecuteTemplate(w, "hanami_routes.rb.tmpl", routesFileTemplateModel); err != nil {
 		return nil, fmt.Errorf("error executing hanami_routes template: %w", err)
 	}
 	if err = w.Flush(); err != nil {
