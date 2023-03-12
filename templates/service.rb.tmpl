@@ -1,0 +1,15 @@
+require "dry/monads"
+
+module {{.AppName}}
+  module Actions
+    module {{.ModuleName | ucFirst}}
+      class {{.ServiceName | ucFirst}}
+        include Dry::Monads[:result]
+
+        def call(params)
+          Success({})
+        end
+      end
+    end
+  end
+end

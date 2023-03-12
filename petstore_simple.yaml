@@ -40,7 +40,16 @@ paths:
       operationId: getAllPets
       responses:
         '200':
-          $ref: '#/components/responses/GetAllPetsResponse'
+          description: get all the pets
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  age:
+                    type: integer
         '400':
           description: Invalid ID supplied
         '404':

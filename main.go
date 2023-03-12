@@ -44,11 +44,22 @@ func main() {
 	if err != nil {
 		return
 	}
-
 	err = WriteActionFiles(actions)
 	if err != nil {
 		return
 	}
+
+	services, err := g.GenerateServices(swagger)
+	if err != nil {
+		return
+	}
+	err = WriteServiceFiles(services)
+
+	contracts, err := g.GenerateContracts(swagger)
+	if err != nil {
+		return
+	}
+	err = WriteContractsFile(contracts)
 }
 
 type Generator struct {
@@ -111,6 +122,36 @@ func WriteActionFiles(actions []ActionDefinition) error {
 	return nil
 }
 
+func WriteServiceFiles(services []ServiceDefinition) error {
+	// make sure the actions directory exists
+	err := os.MkdirAll("gen/actions/", os.ModePerm)
+	if err != nil {
+		return fmt.Errorf("error creating directory gen/actions: %w", err)
+	}
+	for _, serviceDefinition := range services {
+		parentDir := fmt.Sprintf("gen/actions/%s/", toSnake(serviceDefinition.ModuleName))
+		err = os.MkdirAll(parentDir, os.ModePerm)
+		if err != nil {
+			return fmt.Errorf("error creating parent directory %s: %w", parentDir, err)
+		}
+
+		serviceFilePath := fmt.Sprintf("%s%s.rb", parentDir, toSnake(serviceDefinition.ServiceName))
+		err = WriteFile(serviceFilePath, serviceDefinition.GeneratedCode)
+		if err != nil {
+			return fmt.Errorf("error writing service file %s: %w", serviceFilePath, err)
+		}
+	}
+	return nil
+}
+
+func WriteContractsFile(data *bytes.Buffer) error {
+	err := os.MkdirAll("gen/actions/", os.ModePerm)
+	if err != nil {
+		return fmt.Errorf("error creating directory gen/actions: %w", err)
+	}
+	return WriteFile("gen/actions/contracts.rb", data)
+}
+
 func WriteFile(filePath string, data *bytes.Buffer) error {
 	err := os.WriteFile(filePath, data.Bytes(), 0644)
 	if err != nil {
@@ -142,7 +183,7 @@ func toRackPath(codegenPath string) string {
 	return out
 }
 
-func (g Generator) GenerateRoutesFileTemplateModel(swagger *openapi3.T) (*RoutesFileTemplateModel, error) {
+func NewRoutesFileTemplateModel(appName string, swagger *openapi3.T) (*RoutesFileTemplateModel, error) {
 	ops, err := codegen.OperationDefinitions(swagger)
 	if err != nil {
 		return nil, fmt.Errorf("error generating operation definitions: %w", err)
@@ -157,13 +198,13 @@ func (g Generator) GenerateRoutesFileTemplateModel(swagger *openapi3.T) (*Routes
 	}
 
 	return &RoutesFileTemplateModel{
-		AppName: g.AppName,
+		AppName: appName,
 		Routes:  routeTemplateModels,
 	}, nil
 }
 
 func (g Generator) GenerateRoutes(swagger *openapi3.T) (*bytes.Buffer, error) {
-	routesFileTemplateModel, err := g.GenerateRoutesFileTemplateModel(swagger)
+	routesFileTemplateModel, err := NewRoutesFileTemplateModel(g.AppName, swagger)
 	if err != nil {
 		return nil, fmt.Errorf("error generating routes file template model: %w", err)
 	}
@@ -239,6 +280,144 @@ func (g Generator) GenerateActions(swagger *openapi3.T) ([]ActionDefinition, err
 	}
 
 	return actionDefinitions, nil
+}
+
+type ServiceTemplateModel struct {
+	AppName     string
+	ServiceName string
+	ModuleName  string
+}
+
+type ServiceDefinition struct {
+	ServiceTemplateModel
+	GeneratedCode *bytes.Buffer
+}
+
+func NewServiceTemplateModel(appName string, operationDefinition codegen.OperationDefinition) ServiceTemplateModel {
+	return ServiceTemplateModel{
+		AppName:     appName,
+		ServiceName: fmt.Sprintf("%sService", operationDefinition.OperationId),
+		ModuleName:  operationDefinition.Spec.Tags[0],
+	}
+}
+
+func NewServiceDefinition(serviceTemplateModel ServiceTemplateModel, generatedCode *bytes.Buffer) ServiceDefinition {
+	return ServiceDefinition{
+		ServiceTemplateModel: serviceTemplateModel,
+		GeneratedCode:        generatedCode,
+	}
+}
+
+func (g Generator) GenerateServices(swagger *openapi3.T) ([]ServiceDefinition, error) {
+	ops, err := codegen.OperationDefinitions(swagger)
+	if err != nil {
+		return nil, fmt.Errorf("error generating operation definitions: %w", err)
+	}
+
+	tmpl, err := template.New("hanami-service").Funcs(TemplateFunctions).ParseFiles("./templates/service.rb.tmpl")
+	if err != nil {
+		return nil, fmt.Errorf("error parsing template files: %w", err)
+	}
+
+	var serviceDefinitions []ServiceDefinition
+	for _, operationDefinition := range ops {
+		serviceTemplateModel := NewServiceTemplateModel(g.AppName, operationDefinition)
+
+		var buf bytes.Buffer
+		w := bufio.NewWriter(&buf)
+		if err = tmpl.ExecuteTemplate(w, "service.rb.tmpl", serviceTemplateModel); err != nil {
+			return nil, fmt.Errorf("error executing service template: %w", err)
+		}
+		if err = w.Flush(); err != nil {
+			return nil, fmt.Errorf("error flushing output buffer: %w", err)
+		}
+
+		serviceDefinitions = append(serviceDefinitions, NewServiceDefinition(serviceTemplateModel, &buf))
+	}
+
+	return serviceDefinitions, nil
+}
+
+type ContractAttributeDefinition struct {
+	AttributeName string
+	AttributeType string
+}
+
+type ContractTemplateModel struct {
+	ContractName string
+	Attributes   []ContractAttributeDefinition
+}
+
+type ContractsFileTemplateModel struct {
+	AppName   string
+	Contracts []ContractTemplateModel
+}
+
+func GenerateContractAttributeDefinitions(swagger *openapi3.T, schemaRef *openapi3.SchemaRef) []ContractAttributeDefinition {
+	var attributeDefinitions []ContractAttributeDefinition
+	for propertyKey, propertyValue := range schemaRef.Value.Properties {
+		attributeDefinition := GenerateContractAttributeDefinition(swagger, propertyKey, propertyValue)
+		attributeDefinitions = append(attributeDefinitions, attributeDefinition)
+	}
+
+	return attributeDefinitions
+}
+
+func GenerateContractAttributeDefinition(swagger *openapi3.T, key string, value *openapi3.SchemaRef) ContractAttributeDefinition {
+	dryType := GenerateDryType(swagger, value)
+	return ContractAttributeDefinition{
+		AttributeName: key,
+		AttributeType: dryType,
+	}
+}
+
+func NewContractsFileTemplateModel(appName string, swagger *openapi3.T) (*ContractsFileTemplateModel, error) {
+	ops, err := codegen.OperationDefinitions(swagger)
+	if err != nil {
+		return nil, fmt.Errorf("error generating operation definitions: %w", err)
+	}
+
+	var contracts []ContractTemplateModel
+	for _, operationDefinition := range ops {
+		requestContract := ContractTemplateModel{
+			ContractName: fmt.Sprintf("%sRequestContract", operationDefinition.OperationId),
+			Attributes:   nil,
+		}
+
+		responseContract := ContractTemplateModel{
+			ContractName: fmt.Sprintf("%sResponseContract", operationDefinition.OperationId),
+			Attributes:   GenerateContractAttributeDefinitions(swagger, operationDefinition.Spec.Responses["200"].Value.Content["application/json"].Schema),
+		}
+
+		contracts = append(contracts, requestContract, responseContract)
+	}
+
+	return &ContractsFileTemplateModel{
+		AppName:   appName,
+		Contracts: contracts,
+	}, nil
+}
+
+func (g Generator) GenerateContracts(swagger *openapi3.T) (*bytes.Buffer, error) {
+	model, err := NewContractsFileTemplateModel(g.AppName, swagger)
+	if err != nil {
+		return nil, fmt.Errorf("error generating contracts file template model: %w", err)
+	}
+	tmpl, err := template.New("hanami-contracts").Funcs(TemplateFunctions).ParseFiles("./templates/contracts.rb.tmpl")
+	if err != nil {
+		return nil, fmt.Errorf("error parsing template files: %w", err)
+	}
+
+	var buf bytes.Buffer
+	w := bufio.NewWriter(&buf)
+	if err = tmpl.ExecuteTemplate(w, "contracts.rb.tmpl", model); err != nil {
+		return nil, fmt.Errorf("error executing hanami_routes template: %w", err)
+	}
+	if err = w.Flush(); err != nil {
+		return nil, fmt.Errorf("error flushing output buffer: %w", err)
+	}
+
+	return &buf, nil
 }
 
 type AttributeDefinition struct {
@@ -323,7 +502,7 @@ func isRef(propertyValue *openapi3.SchemaRef) bool {
 }
 
 func GenerateReferencedDryType(swagger *openapi3.T, propertyValue *openapi3.SchemaRef) string {
-	return fmt.Sprintf("Types::%s", propertyValue.Value.Title)
+	return fmt.Sprintf("Schemas::%s", propertyValue.Value.Title)
 }
 
 func GenerateDryType(swagger *openapi3.T, propertyValue *openapi3.SchemaRef) string {
@@ -347,8 +526,6 @@ func GenerateDryType(swagger *openapi3.T, propertyValue *openapi3.SchemaRef) str
 	return dryType
 }
 
-// GenerateAttributeDefinition ...
-// probably going to be some recursion here eventually
 func GenerateAttributeDefinition(swagger *openapi3.T, key string, propertyValue *openapi3.SchemaRef) AttributeDefinition {
 	dryType := GenerateDryType(swagger, propertyValue)
 	return AttributeDefinition{

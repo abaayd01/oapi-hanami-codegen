@@ -1,0 +1,17 @@
+require "dry/validation"
+
+module {{.AppName}}
+  module Actions
+    module Contracts
+        {{range .Contracts}}
+        class {{.ContractName}} < Dry::Validation::Contract
+          params do
+          {{range .Attributes}}
+            required(:{{.AttributeName | toSnake }}).value({{.AttributeType}})
+          {{end}}
+          end
+        end
+        {{end}}
+    end
+  end
+end

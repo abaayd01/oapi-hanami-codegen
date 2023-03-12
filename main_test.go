@@ -1,11 +1,11 @@
 package main
 
 import (
+	"fmt"
 	"testing"
 )
 
-func TestGenerateActions(t *testing.T) {
-}
+func TestGenerateActions(t *testing.T) {}
 
 func TestToRackPath(t *testing.T) {
 	type args struct {
@@ -45,4 +45,16 @@ func TestToRackPath(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestNewContractsFileTemplateModel(t *testing.T) {
+	appName := "TestApp"
+	swagger, err := LoadSwagger("./petstore_simple.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	out, err := NewContractsFileTemplateModel(appName, swagger)
+
+	fmt.Println(out)
 }
