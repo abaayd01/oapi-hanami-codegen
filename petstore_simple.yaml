@@ -1,4 +1,6 @@
 openapi: 3.0.3
+x-stoplight:
+  id: y7psq33e36tn6
 info:
   title: Swagger Petstore - OpenAPI 3.0
   description: |-
@@ -40,20 +42,67 @@ paths:
       operationId: getAllPets
       responses:
         '200':
-          description: get all the pets
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  pets:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/Pet"
-        '400':
-          description: Invalid ID supplied
+                  name:
+                    type: string
+                    x-stoplight:
+                      id: yz8u33tzfy3fn
+                  age:
+                    type: integer
+                    x-stoplight:
+                      id: 8q6oudts1e38j
+        '401':
+          description: Unauthorized
         '404':
           description: Pet not found
+      parameters:
+        - schema:
+            type: integer
+          in: query
+          name: page
+        - schema:
+            type: string
+          in: query
+          name: q
+    post:
+      summary: ''
+      operationId: createPet
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  name:
+                    type: string
+                    x-stoplight:
+                      id: peo698p2w8cn8
+                  age:
+                    type: integer
+                    x-stoplight:
+                      id: yj5pf08xin1wq
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  x-stoplight:
+                    id: 44wwquojht2rn
+                age:
+                  type: integer
+                  x-stoplight:
+                    id: fa7i52ml2d2nb
+      tags:
+        - pets
   '/pets/{petId}':
     get:
       tags:

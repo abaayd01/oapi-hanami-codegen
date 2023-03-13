@@ -370,66 +370,6 @@ func (g Generator) GenerateServices(swagger *openapi3.T) ([]ServiceDefinition, e
 	return serviceDefinitions, nil
 }
 
-type ContractAttributeDefinition struct {
-	AttributeName string
-	AttributeType string
-}
-
-type ContractTemplateModel struct {
-	ContractName string
-	Attributes   []ContractAttributeDefinition
-}
-
-type ContractsFileTemplateModel struct {
-	AppName   string
-	Contracts []ContractTemplateModel
-}
-
-func GenerateContractAttributeDefinitions(swagger *openapi3.T, schemaRef *openapi3.SchemaRef) []ContractAttributeDefinition {
-	var attributeDefinitions []ContractAttributeDefinition
-	for propertyKey, propertyValue := range schemaRef.Value.Properties {
-		attributeDefinition := GenerateContractAttributeDefinition(swagger, propertyKey, propertyValue)
-		attributeDefinitions = append(attributeDefinitions, attributeDefinition)
-	}
-
-	return attributeDefinitions
-}
-
-func GenerateContractAttributeDefinition(swagger *openapi3.T, key string, value *openapi3.SchemaRef) ContractAttributeDefinition {
-	dryType := GenerateDryType(swagger, value)
-	return ContractAttributeDefinition{
-		AttributeName: key,
-		AttributeType: dryType,
-	}
-}
-
-func NewContractsFileTemplateModel(appName string, swagger *openapi3.T) (*ContractsFileTemplateModel, error) {
-	ops, err := codegen.OperationDefinitions(swagger)
-	if err != nil {
-		return nil, fmt.Errorf("error generating operation definitions: %w", err)
-	}
-
-	var contracts []ContractTemplateModel
-	for _, operationDefinition := range ops {
-		requestContract := ContractTemplateModel{
-			ContractName: fmt.Sprintf("%sRequestContract", operationDefinition.OperationId),
-			Attributes:   nil,
-		}
-
-		responseContract := ContractTemplateModel{
-			ContractName: fmt.Sprintf("%sResponseContract", operationDefinition.OperationId),
-			Attributes:   GenerateContractAttributeDefinitions(swagger, operationDefinition.Spec.Responses["200"].Value.Content["application/json"].Schema),
-		}
-
-		contracts = append(contracts, requestContract, responseContract)
-	}
-
-	return &ContractsFileTemplateModel{
-		AppName:   appName,
-		Contracts: contracts,
-	}, nil
-}
-
 func (g Generator) GenerateContracts(swagger *openapi3.T) (*bytes.Buffer, error) {
 	model, err := NewContractsFileTemplateModel(g.AppName, swagger)
 	if err != nil {
@@ -452,34 +392,55 @@ func (g Generator) GenerateContracts(swagger *openapi3.T) (*bytes.Buffer, error)
 	return &buf, nil
 }
 
-// TODO unify schema attribute definition and contract attribute definition
-
-type SchemaAttributeDefinition struct {
-	AttributeName string
-	AttributeType string
+type ContractTemplateModel struct {
+	ContractName string
+	Attributes   []AttributeDefinition
 }
 
-func GenerateSchemaAttributeDefinitions(swagger *openapi3.T, schemaRef *openapi3.SchemaRef) []SchemaAttributeDefinition {
-	var attributeDefinitions []SchemaAttributeDefinition
-	for propertyKey, propertyValue := range schemaRef.Value.Properties {
-		attributeDefinition := GenerateSchemaAttributeDefinition(swagger, propertyKey, propertyValue)
-		attributeDefinitions = append(attributeDefinitions, attributeDefinition)
-	}
-
-	return attributeDefinitions
+type ContractsFileTemplateModel struct {
+	AppName   string
+	Contracts []ContractTemplateModel
 }
 
-func GenerateSchemaAttributeDefinition(swagger *openapi3.T, key string, value *openapi3.SchemaRef) SchemaAttributeDefinition {
-	dryType := GenerateDryType(swagger, value)
-	return SchemaAttributeDefinition{
-		AttributeName: key,
-		AttributeType: dryType,
+func NewContractsFileTemplateModel(appName string, swagger *openapi3.T) (*ContractsFileTemplateModel, error) {
+	ops, err := codegen.OperationDefinitions(swagger)
+	if err != nil {
+		return nil, fmt.Errorf("error generating operation definitions: %w", err)
 	}
+
+	var contracts []ContractTemplateModel
+	for _, operationDefinition := range ops {
+		requestContract := ContractTemplateModel{
+			ContractName: fmt.Sprintf("%sRequestContract", operationDefinition.OperationId),
+		}
+
+		// injecting the request body attributes
+		if operationDefinition.Spec.RequestBody != nil {
+			requestContract.Attributes = GenerateAttributeDefinitions(swagger, operationDefinition.Spec.RequestBody.Value.Content["application/json"].Schema)
+		}
+
+		// injecting the query & path params
+		for _, pathParam := range operationDefinition.Spec.Parameters {
+			requestContract.Attributes = append(requestContract.Attributes, GenerateAttributeDefinition(swagger, pathParam.Value.Name, pathParam.Value.Schema))
+		}
+
+		responseContract := ContractTemplateModel{
+			ContractName: fmt.Sprintf("%sResponseContract", operationDefinition.OperationId),
+			Attributes:   GenerateAttributeDefinitions(swagger, operationDefinition.Spec.Responses["200"].Value.Content["application/json"].Schema),
+		}
+
+		contracts = append(contracts, requestContract, responseContract)
+	}
+
+	return &ContractsFileTemplateModel{
+		AppName:   appName,
+		Contracts: contracts,
+	}, nil
 }
 
 type SchemaTemplateModel struct {
 	SchemaName string
-	Attributes []SchemaAttributeDefinition
+	Attributes []AttributeDefinition
 }
 
 type SchemasFileTemplateModel struct {
@@ -493,7 +454,7 @@ func NewSchemasFileTemplateModel(appName string, swagger *openapi3.T) (SchemasFi
 	for key, value := range swagger.Components.Schemas {
 		schemaTemplateModel := SchemaTemplateModel{
 			SchemaName: key,
-			Attributes: GenerateSchemaAttributeDefinitions(swagger, value),
+			Attributes: GenerateAttributeDefinitions(swagger, value),
 		}
 
 		schemas = append(schemas, schemaTemplateModel)
@@ -525,48 +486,16 @@ func (g Generator) GenerateSchemas(swagger *openapi3.T) (*bytes.Buffer, error) {
 }
 
 type AttributeDefinition struct {
-	Name    string
-	DryType string
-}
-
-type ModelDefinition struct {
-	ClassName  string
-	Attributes []AttributeDefinition
-}
-
-func GenerateModelDefinitions(swagger *openapi3.T) ([]ModelDefinition, error) {
-	var modelDefinitions []ModelDefinition
-
-	for componentKey, component := range swagger.Components.Schemas {
-		modelDefinition := GenerateModelDefinition(swagger, componentKey, component)
-		modelDefinitions = append(modelDefinitions, modelDefinition)
-	}
-
-	for responseKey, response := range swagger.Components.Responses {
-		modelDefinition := GenerateResponseModelDefinition(swagger, responseKey, response)
-		modelDefinitions = append(modelDefinitions, modelDefinition)
-	}
-
-	return modelDefinitions, nil
-}
-
-func GenerateResponseModelDefinition(swagger *openapi3.T, key string, response *openapi3.ResponseRef) ModelDefinition {
-	schemaRef := response.Value.Content.Get("application/json").Schema
-	return GenerateModelDefinition(swagger, key, schemaRef)
-}
-
-func GenerateModelDefinition(swagger *openapi3.T, key string, schemaRef *openapi3.SchemaRef) ModelDefinition {
-	// assume the root is an object?
-
-	attributes := GenerateAttributeDefinitions(swagger, schemaRef)
-
-	return ModelDefinition{
-		ClassName:  key,
-		Attributes: attributes,
-	}
+	AttributeName string
+	AttributeType string
+	Verb          string
+	Block         string
 }
 
 func GenerateAttributeDefinitions(swagger *openapi3.T, schemaRef *openapi3.SchemaRef) []AttributeDefinition {
+	if schemaRef == nil {
+		return nil
+	}
 	var attributeDefinitions []AttributeDefinition
 	for propertyKey, propertyValue := range schemaRef.Value.Properties {
 		attributeDefinition := GenerateAttributeDefinition(swagger, propertyKey, propertyValue)
@@ -576,17 +505,58 @@ func GenerateAttributeDefinitions(swagger *openapi3.T, schemaRef *openapi3.Schem
 	return attributeDefinitions
 }
 
-func GenerateDryTypeForArray(swagger *openapi3.T, propertyValue *openapi3.SchemaRef) string {
-	innerType := GenerateDryType(swagger, propertyValue.Value.Items)
-	return fmt.Sprintf("Types::Array.of(%s)", innerType)
+func GenerateAttributeDefinition(swagger *openapi3.T, key string, schemaRef *openapi3.SchemaRef) AttributeDefinition {
+	var attributeType, verb, block string
+	if isRef(schemaRef) {
+		attributeType = GenerateReferencedSchemaType(swagger, schemaRef)
+		return AttributeDefinition{
+			AttributeName: key,
+			AttributeType: attributeType,
+			Verb:          "value",
+		}
+	}
+
+	propertyType := schemaRef.Value.Type
+	switch propertyType {
+	case "string":
+		attributeType = ":string"
+		verb = "value"
+	case "integer":
+		attributeType = ":integer"
+		verb = "value"
+	case "array":
+		verb = "array"
+		contractAttributeDefinition := GenerateAttributeDefinition(swagger, "", schemaRef.Value.Items)
+		attributeType = contractAttributeDefinition.AttributeType
+		block = contractAttributeDefinition.Block
+	case "object":
+		attributeType = ":hash"
+		verb = "value"
+		block = GenerateHashBlock(swagger, schemaRef)
+	}
+
+	return AttributeDefinition{
+		AttributeName: key,
+		AttributeType: attributeType,
+		Verb:          verb,
+		Block:         block,
+	}
 }
 
-func GenerateDryTypeForObject(swagger *openapi3.T, propertyValue *openapi3.SchemaRef) string {
-	attributeDefinitions := GenerateAttributeDefinitions(swagger, propertyValue)
-	tmpl, _ := template.New("dry-hash").Parse("{{range .}}{{.Name}}: {{.DryType}}, {{end}}")
+func isRef(propertyValue *openapi3.SchemaRef) bool {
+	return propertyValue.Ref != ""
+}
+
+func GenerateReferencedSchemaType(swagger *openapi3.T, schemaRef *openapi3.SchemaRef) string {
+	return fmt.Sprintf("Schemas::%s", schemaRef.Value.Title)
+}
+
+func GenerateHashBlock(swagger *openapi3.T, schemaRef *openapi3.SchemaRef) string {
+	attributeDefinitions := GenerateAttributeDefinitions(swagger, schemaRef)
+	tmpl, _ := template.New("dry-hash").Funcs(TemplateFunctions).ParseFiles("./templates/hash.rb.tmpl")
 	var buf bytes.Buffer
 	w := bufio.NewWriter(&buf)
-	err := tmpl.ExecuteTemplate(w, "dry-hash", attributeDefinitions)
+	err := tmpl.ExecuteTemplate(w, "hash.rb.tmpl", attributeDefinitions)
 	if err != nil {
 		log.Println("could not execute template dry-hash")
 	}
@@ -596,44 +566,5 @@ func GenerateDryTypeForObject(swagger *openapi3.T, propertyValue *openapi3.Schem
 		fmt.Errorf("error flushing output buffer")
 	}
 
-	innerTypes := buf.String()
-
-	return fmt.Sprintf("Types::Hash.schema(%s)", innerTypes)
-}
-
-func isRef(propertyValue *openapi3.SchemaRef) bool {
-	return propertyValue.Ref != ""
-}
-
-func GenerateReferencedDryType(swagger *openapi3.T, propertyValue *openapi3.SchemaRef) string {
-	return fmt.Sprintf("Schemas::%s", propertyValue.Value.Title)
-}
-
-func GenerateDryType(swagger *openapi3.T, propertyValue *openapi3.SchemaRef) string {
-	if isRef(propertyValue) {
-		return GenerateReferencedDryType(swagger, propertyValue)
-	}
-
-	propertyType := propertyValue.Value.Type
-	var dryType string
-	switch propertyType {
-	case "string":
-		dryType = ":string"
-	case "integer":
-		dryType = ":integer"
-	case "array":
-		dryType = GenerateDryTypeForArray(swagger, propertyValue)
-	case "object":
-		dryType = GenerateDryTypeForObject(swagger, propertyValue)
-	}
-
-	return dryType
-}
-
-func GenerateAttributeDefinition(swagger *openapi3.T, key string, propertyValue *openapi3.SchemaRef) AttributeDefinition {
-	dryType := GenerateDryType(swagger, propertyValue)
-	return AttributeDefinition{
-		Name:    key,
-		DryType: dryType,
-	}
+	return buf.String()
 }
