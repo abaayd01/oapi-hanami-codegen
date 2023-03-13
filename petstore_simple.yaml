@@ -42,6 +42,7 @@ paths:
       operationId: getAllPets
       responses:
         '200':
+          description: Get all the pets
           content:
             application/json:
               schema:
@@ -136,6 +137,109 @@ paths:
         - api_key: [ ]
         - petstore_auth:
             - 'write:pets'
+  /books:
+    get:
+      summary: Your GET endpoint
+      tags:
+        - books
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  books:
+                    type: array
+                    x-stoplight:
+                      id: ti0xc3j58dcbj
+                    items:
+                      x-stoplight:
+                        id: lj42qnh3ok1mj
+                      type: object
+                      properties:
+                        title:
+                          type: string
+                          x-stoplight:
+                            id: 8cnpovyth7yhv
+                        author:
+                          type: string
+                          x-stoplight:
+                            id: ee94jx0j2mboh
+      operationId: get-books
+    parameters: [ ]
+  '/books/{bookId}':
+    get:
+      summary: Your GET endpoint
+      tags:
+        - books
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  title:
+                    type: string
+                    x-stoplight:
+                      id: vyyuez1shtc6p
+                  author:
+                    type: string
+                    x-stoplight:
+                      id: ldlnp8hrc5za3
+                  reviews:
+                    type: array
+                    x-stoplight:
+                      id: 7aj07cnqljb4f
+                    items:
+                      x-stoplight:
+                        id: bdtpkhnfofyq4
+                      type: object
+                      properties:
+                        text:
+                          type: string
+                          x-stoplight:
+                            id: gxwd1o23m1tp7
+                        user:
+                          type: object
+                          x-stoplight:
+                            id: 18mnn4ej07mwd
+                          properties:
+                            id:
+                              type: string
+                              x-stoplight:
+                                id: a9uxgo7i356qr
+                            name:
+                              type: string
+                              x-stoplight:
+                                id: dscyp4mjsi6v1
+                        rating:
+                          type: integer
+                          x-stoplight:
+                            id: xa1ssnkd2eag5
+                  avatar:
+                    type: object
+                    x-stoplight:
+                      id: 42vpuhcyj83al
+                    properties:
+                      profileImageUrl:
+                        type: string
+                        x-stoplight:
+                          id: 5w0rkgd2shly1
+                      id:
+                        type: integer
+                        x-stoplight:
+                          id: 2jrqwx87fr9y6
+      operationId: get-book-by-id
+    parameters:
+      - schema:
+          type: string
+        name: bookId
+        in: path
+        required: true
 components:
   schemas:
     Pet:

@@ -1,17 +1,26 @@
 require "dry/validation"
 
+{{- define "attribute"}}
+  required(:{{.AttributeName | toSnake }}).{{.Verb}}({{.AttributeType}}){{if .HasChildren}} do
+  {{- range .NestedAttributes}}
+    {{- template "attribute" . -}}
+  {{- end}}
+  end
+  {{- end}}
+{{- end}}
+
 module {{.AppName}}
   module Actions
     module Contracts
-        {{range .Contracts}}
-        class {{.ContractName}} < Dry::Validation::Contract
-          params do
-          {{range .Attributes}}
-            required(:{{.AttributeName | toSnake }}).{{.Verb}}({{.AttributeType}}) {{.Block}}
-          {{end}}
-          end
+      {{- range .Contracts}}
+      class {{.ContractName}} < Dry::Validation::Contract
+        params do
+          {{- range .Attributes}}
+            {{- template "attribute" . -}}
+          {{- end}}
         end
-        {{end}}
+      end
+      {{end}}
     end
   end
 end

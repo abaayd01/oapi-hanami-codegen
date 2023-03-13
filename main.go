@@ -486,10 +486,11 @@ func (g Generator) GenerateSchemas(swagger *openapi3.T) (*bytes.Buffer, error) {
 }
 
 type AttributeDefinition struct {
-	AttributeName string
-	AttributeType string
-	Verb          string
-	Block         string
+	AttributeName    string
+	AttributeType    string
+	Verb             string
+	HasChildren      bool
+	NestedAttributes []AttributeDefinition
 }
 
 func GenerateAttributeDefinitions(swagger *openapi3.T, schemaRef *openapi3.SchemaRef) []AttributeDefinition {
@@ -506,41 +507,41 @@ func GenerateAttributeDefinitions(swagger *openapi3.T, schemaRef *openapi3.Schem
 }
 
 func GenerateAttributeDefinition(swagger *openapi3.T, key string, schemaRef *openapi3.SchemaRef) AttributeDefinition {
-	var attributeType, verb, block string
+	attributeDefinition := AttributeDefinition{
+		AttributeName:    key,
+		AttributeType:    "",
+		Verb:             "",
+		HasChildren:      false,
+		NestedAttributes: nil,
+	}
+
 	if isRef(schemaRef) {
-		attributeType = GenerateReferencedSchemaType(swagger, schemaRef)
-		return AttributeDefinition{
-			AttributeName: key,
-			AttributeType: attributeType,
-			Verb:          "value",
-		}
+		attributeDefinition.AttributeType = GenerateReferencedSchemaType(swagger, schemaRef)
+		return attributeDefinition
 	}
 
 	propertyType := schemaRef.Value.Type
 	switch propertyType {
 	case "string":
-		attributeType = ":string"
-		verb = "value"
+		attributeDefinition.AttributeType = ":string"
+		attributeDefinition.Verb = "value"
 	case "integer":
-		attributeType = ":integer"
-		verb = "value"
+		attributeDefinition.AttributeType = ":integer"
+		attributeDefinition.Verb = "value"
 	case "array":
-		verb = "array"
-		contractAttributeDefinition := GenerateAttributeDefinition(swagger, "", schemaRef.Value.Items)
-		attributeType = contractAttributeDefinition.AttributeType
-		block = contractAttributeDefinition.Block
+		attributeDefinition.Verb = "array"
+		itemsAttributeDefinition := GenerateAttributeDefinition(swagger, "", schemaRef.Value.Items)
+		attributeDefinition.AttributeType = itemsAttributeDefinition.AttributeType
+		attributeDefinition.NestedAttributes = itemsAttributeDefinition.NestedAttributes
+		attributeDefinition.HasChildren = len(itemsAttributeDefinition.NestedAttributes) > 0
 	case "object":
-		attributeType = ":hash"
-		verb = "value"
-		block = GenerateHashBlock(swagger, schemaRef)
+		attributeDefinition.AttributeType = ":hash"
+		attributeDefinition.Verb = "value"
+		attributeDefinition.HasChildren = true
+		attributeDefinition.NestedAttributes = GenerateAttributeDefinitions(swagger, schemaRef)
 	}
 
-	return AttributeDefinition{
-		AttributeName: key,
-		AttributeType: attributeType,
-		Verb:          verb,
-		Block:         block,
-	}
+	return attributeDefinition
 }
 
 func isRef(propertyValue *openapi3.SchemaRef) bool {

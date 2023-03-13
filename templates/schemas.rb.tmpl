@@ -1,13 +1,22 @@
 require "dry/validation"
 
+{{- define "attribute"}}
+  required(:{{.AttributeName | toSnake }}).{{.Verb}}({{.AttributeType}}){{if .HasChildren}} do
+  {{- range .NestedAttributes}}
+    {{- template "attribute" . -}}
+  {{- end}}
+  end
+  {{- end}}
+{{- end}}
+
 module {{.AppName}}
   module Actions
     module Schemas
       {{range .Schemas}}
       {{.SchemaName}} = Dry::Schema.Params do
-        {{range .Attributes}}
-        required(:{{.AttributeName | toSnake }}).value({{.AttributeType}})
-        {{end}}
+        {{- range .Attributes}}
+            {{- template "attribute" . -}}
+        {{- end}}
       end
       {{end}}
     end
