@@ -1,7 +1,7 @@
 require "dry/validation"
 
 {{- define "attribute"}}
-  required(:{{.AttributeName | toSnake }}).{{.Verb}}({{.AttributeType}}){{if .HasChildren}} do
+  {{if .Required}}required{{else}}optional{{end}}(:{{.AttributeName | toSnake }}).{{.Verb}}({{.AttributeType}}){{if .HasChildren}} do
   {{- range .NestedAttributes}}
     {{- template "attribute" . -}}
   {{- end}}

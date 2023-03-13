@@ -421,7 +421,7 @@ func NewContractsFileTemplateModel(appName string, swagger *openapi3.T) (*Contra
 
 		// injecting the query & path params
 		for _, pathParam := range operationDefinition.Spec.Parameters {
-			requestContract.Attributes = append(requestContract.Attributes, GenerateAttributeDefinition(swagger, pathParam.Value.Name, pathParam.Value.Schema))
+			requestContract.Attributes = append(requestContract.Attributes, GenerateAttributeDefinition(swagger, pathParam.Value.Name, pathParam.Value.Schema, pathParam.Value.Required))
 		}
 
 		responseContract := ContractTemplateModel{
@@ -491,6 +491,17 @@ type AttributeDefinition struct {
 	Verb             string
 	HasChildren      bool
 	NestedAttributes []AttributeDefinition
+	Required         bool
+}
+
+func IsInArray(arr []string, val string) bool {
+	for _, el := range arr {
+		if el == val {
+			return true
+		}
+	}
+
+	return false
 }
 
 func GenerateAttributeDefinitions(swagger *openapi3.T, schemaRef *openapi3.SchemaRef) []AttributeDefinition {
@@ -499,20 +510,21 @@ func GenerateAttributeDefinitions(swagger *openapi3.T, schemaRef *openapi3.Schem
 	}
 	var attributeDefinitions []AttributeDefinition
 	for propertyKey, propertyValue := range schemaRef.Value.Properties {
-		attributeDefinition := GenerateAttributeDefinition(swagger, propertyKey, propertyValue)
+		attributeDefinition := GenerateAttributeDefinition(swagger, propertyKey, propertyValue, IsInArray(schemaRef.Value.Required, propertyKey))
 		attributeDefinitions = append(attributeDefinitions, attributeDefinition)
 	}
 
 	return attributeDefinitions
 }
 
-func GenerateAttributeDefinition(swagger *openapi3.T, key string, schemaRef *openapi3.SchemaRef) AttributeDefinition {
+func GenerateAttributeDefinition(swagger *openapi3.T, key string, schemaRef *openapi3.SchemaRef, required bool) AttributeDefinition {
 	attributeDefinition := AttributeDefinition{
 		AttributeName:    key,
 		AttributeType:    "",
 		Verb:             "",
 		HasChildren:      false,
 		NestedAttributes: nil,
+		Required:         required,
 	}
 
 	if isRef(schemaRef) {
@@ -530,7 +542,7 @@ func GenerateAttributeDefinition(swagger *openapi3.T, key string, schemaRef *ope
 		attributeDefinition.Verb = "value"
 	case "array":
 		attributeDefinition.Verb = "array"
-		itemsAttributeDefinition := GenerateAttributeDefinition(swagger, "", schemaRef.Value.Items)
+		itemsAttributeDefinition := GenerateAttributeDefinition(swagger, "", schemaRef.Value.Items, IsInArray(schemaRef.Value.Required, key)) // todo: don't hardcode
 		attributeDefinition.AttributeType = itemsAttributeDefinition.AttributeType
 		attributeDefinition.NestedAttributes = itemsAttributeDefinition.NestedAttributes
 		attributeDefinition.HasChildren = len(itemsAttributeDefinition.NestedAttributes) > 0

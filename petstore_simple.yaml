@@ -65,6 +65,7 @@ paths:
             type: integer
           in: query
           name: page
+          required: true
         - schema:
             type: string
           in: query
@@ -134,7 +135,7 @@ paths:
         '404':
           description: Pet not found
       security:
-        - api_key: [ ]
+        - api_key: []
         - petstore_auth:
             - 'write:pets'
   /books:
@@ -168,7 +169,7 @@ paths:
                           x-stoplight:
                             id: ee94jx0j2mboh
       operationId: get-books
-    parameters: [ ]
+    parameters: []
   '/books/{bookId}':
     get:
       summary: Your GET endpoint
@@ -220,6 +221,9 @@ paths:
                           type: integer
                           x-stoplight:
                             id: xa1ssnkd2eag5
+                      required:
+                        - text
+                        - user
                   avatar:
                     type: object
                     x-stoplight:
@@ -233,6 +237,10 @@ paths:
                         type: integer
                         x-stoplight:
                           id: 2jrqwx87fr9y6
+                required:
+                  - title
+                  - author
+                  - reviews
       operationId: get-book-by-id
     parameters:
       - schema:
