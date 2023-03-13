@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"github.com/deepmap/oapi-codegen/pkg/codegen"
 	"github.com/deepmap/oapi-codegen/pkg/util"
@@ -60,6 +61,12 @@ func main() {
 		return
 	}
 	err = WriteContractsFile(contracts)
+
+	schemas, err := g.GenerateSchemas(swagger)
+	if err != nil {
+		return
+	}
+	err = WriteSchemasFile(schemas)
 }
 
 type Generator struct {
@@ -136,6 +143,12 @@ func WriteServiceFiles(services []ServiceDefinition) error {
 		}
 
 		serviceFilePath := fmt.Sprintf("%s%s.rb", parentDir, toSnake(serviceDefinition.ServiceName))
+
+		fileExists := DoesFileExist(serviceFilePath)
+		if fileExists {
+			continue // don't write the thing, we don't want to overwrite service files
+		}
+
 		err = WriteFile(serviceFilePath, serviceDefinition.GeneratedCode)
 		if err != nil {
 			return fmt.Errorf("error writing service file %s: %w", serviceFilePath, err)
@@ -152,6 +165,14 @@ func WriteContractsFile(data *bytes.Buffer) error {
 	return WriteFile("gen/actions/contracts.rb", data)
 }
 
+func WriteSchemasFile(data *bytes.Buffer) error {
+	err := os.MkdirAll("gen/actions/", os.ModePerm)
+	if err != nil {
+		return fmt.Errorf("error creating directory gen/actions: %w", err)
+	}
+	return WriteFile("gen/actions/schemas.rb", data)
+}
+
 func WriteFile(filePath string, data *bytes.Buffer) error {
 	err := os.WriteFile(filePath, data.Bytes(), 0644)
 	if err != nil {
@@ -159,6 +180,16 @@ func WriteFile(filePath string, data *bytes.Buffer) error {
 	}
 
 	return nil
+}
+
+func DoesFileExist(filePath string) bool {
+	_, err := os.Stat(filePath)
+
+	if errors.Is(err, os.ErrNotExist) {
+		return false
+	}
+
+	return true
 }
 
 var TemplateFunctions = merge(codegen.TemplateFunctions, template.FuncMap{
@@ -411,7 +442,79 @@ func (g Generator) GenerateContracts(swagger *openapi3.T) (*bytes.Buffer, error)
 	var buf bytes.Buffer
 	w := bufio.NewWriter(&buf)
 	if err = tmpl.ExecuteTemplate(w, "contracts.rb.tmpl", model); err != nil {
-		return nil, fmt.Errorf("error executing hanami_routes template: %w", err)
+		return nil, fmt.Errorf("error executing hanami-contracts template: %w", err)
+	}
+	if err = w.Flush(); err != nil {
+		return nil, fmt.Errorf("error flushing output buffer: %w", err)
+	}
+
+	return &buf, nil
+}
+
+// TODO unify schema attribute definition and contract attribute definition
+
+type SchemaAttributeDefinition struct {
+	AttributeName string
+	AttributeType string
+}
+
+func GenerateSchemaAttributeDefinitions(swagger *openapi3.T, schemaRef *openapi3.SchemaRef) []SchemaAttributeDefinition {
+	var attributeDefinitions []SchemaAttributeDefinition
+	for propertyKey, propertyValue := range schemaRef.Value.Properties {
+		attributeDefinition := GenerateSchemaAttributeDefinition(swagger, propertyKey, propertyValue)
+		attributeDefinitions = append(attributeDefinitions, attributeDefinition)
+	}
+
+	return attributeDefinitions
+}
+
+func GenerateSchemaAttributeDefinition(swagger *openapi3.T, key string, value *openapi3.SchemaRef) SchemaAttributeDefinition {
+	dryType := GenerateDryType(swagger, value)
+	return SchemaAttributeDefinition{
+		AttributeName: key,
+		AttributeType: dryType,
+	}
+}
+
+type SchemaTemplateModel struct {
+	SchemaName string
+	Attributes []SchemaAttributeDefinition
+}
+
+type SchemasFileTemplateModel struct {
+	AppName string
+	Schemas []SchemaTemplateModel
+}
+
+func NewSchemasFileTemplateModel(appName string, swagger *openapi3.T) (SchemasFileTemplateModel, error) {
+	var schemas []SchemaTemplateModel
+
+	for key, value := range swagger.Components.Schemas {
+		schemaTemplateModel := SchemaTemplateModel{
+			SchemaName: key,
+			Attributes: GenerateSchemaAttributeDefinitions(swagger, value),
+		}
+
+		schemas = append(schemas, schemaTemplateModel)
+	}
+
+	return SchemasFileTemplateModel{AppName: appName, Schemas: schemas}, nil
+}
+
+func (g Generator) GenerateSchemas(swagger *openapi3.T) (*bytes.Buffer, error) {
+	model, err := NewSchemasFileTemplateModel(g.AppName, swagger)
+	if err != nil {
+		return nil, fmt.Errorf("error generating schemas file template model: %w", err)
+	}
+	tmpl, err := template.New("hanami-schemas").Funcs(TemplateFunctions).ParseFiles("./templates/schemas.rb.tmpl")
+	if err != nil {
+		return nil, fmt.Errorf("error parsing template files: %w", err)
+	}
+
+	var buf bytes.Buffer
+	w := bufio.NewWriter(&buf)
+	if err = tmpl.ExecuteTemplate(w, "schemas.rb.tmpl", model); err != nil {
+		return nil, fmt.Errorf("error executing hanami-schemas template: %w", err)
 	}
 	if err = w.Flush(); err != nil {
 		return nil, fmt.Errorf("error flushing output buffer: %w", err)

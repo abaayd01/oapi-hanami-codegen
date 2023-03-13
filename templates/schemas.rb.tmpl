@@ -1,0 +1,15 @@
+require "dry/validation"
+
+module {{.AppName}}
+  module Actions
+    module Schemas
+      {{range .Schemas}}
+      {{.SchemaName}} = Dry::Schema.Params do
+        {{range .Attributes}}
+        required(:{{.AttributeName | toSnake }}).value({{.AttributeType}})
+        {{end}}
+      end
+      {{end}}
+    end
+  end
+end

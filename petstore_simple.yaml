@@ -46,10 +46,10 @@ paths:
               schema:
                 type: object
                 properties:
-                  name:
-                    type: string
-                  age:
-                    type: integer
+                  pets:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Pet"
         '400':
           description: Invalid ID supplied
         '404':
