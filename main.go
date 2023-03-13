@@ -28,6 +28,7 @@ func main() {
 		return
 	}
 
+	// todo, pass in the AppName as a command line arg too
 	g := Generator{
 		AppName: "PetstoreApp",
 	}
@@ -617,9 +618,9 @@ func GenerateDryType(swagger *openapi3.T, propertyValue *openapi3.SchemaRef) str
 	var dryType string
 	switch propertyType {
 	case "string":
-		dryType = "Types::String"
+		dryType = ":string"
 	case "integer":
-		dryType = "Types::Integer"
+		dryType = ":integer"
 	case "array":
 		dryType = GenerateDryTypeForArray(swagger, propertyValue)
 	case "object":

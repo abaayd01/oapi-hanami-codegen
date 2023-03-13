@@ -3,7 +3,7 @@ module {{.AppName}}
     module {{.ModuleName | ucFirst}}
       class {{.ActionName}} < {{.AppName}}::Action
         def handle(request, response)
-          request_validation_result = Contracts::{{.ActionName}}RequestContract.new.call(request)
+          request_validation_result = Contracts::{{.ActionName}}RequestContract.new.call(request.params.to_h)
 
           if request_validation_result.failure?
             Hanami.logger.error "request validation failure"
