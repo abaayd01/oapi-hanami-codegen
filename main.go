@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"embed"
 	"errors"
 	"flag"
 	"fmt"
@@ -19,6 +20,9 @@ type args struct {
 	openAPISpecFilePath string
 	appName             string
 }
+
+//go:embed templates/* templates/fragments/*
+var templatesFS embed.FS
 
 func parseArgs() args {
 	inputFilePtr := flag.String("inputFile", "", "file path of OpenAPI spec")
@@ -259,7 +263,8 @@ func (g Generator) GenerateRoutes(swagger *openapi3.T) (*bytes.Buffer, error) {
 		return nil, fmt.Errorf("error generating routes file template model: %w", err)
 	}
 
-	tmpl, err := template.New("hanami-codegen").Funcs(TemplateFunctions).ParseFiles("./templates/hanami_routes.rb.tmpl")
+	tmpl, err := template.New("hanami-codegen").Funcs(TemplateFunctions).ParseFS(templatesFS, "templates/hanami_routes.rb.tmpl")
+	//tmpl, err := template.New("hanami-codegen").Funcs(TemplateFunctions).ParseFiles("./templates/hanami_routes.rb.tmpl")
 	if err != nil {
 		return nil, fmt.Errorf("error parsing template files: %w", err)
 	}
@@ -308,7 +313,7 @@ func (g Generator) GenerateActions(swagger *openapi3.T) ([]ActionDefinition, err
 		return nil, fmt.Errorf("error generating operation definitions: %w", err)
 	}
 
-	tmpl, err := template.New("hanami-action").Funcs(TemplateFunctions).ParseFiles("./templates/hanami_action.rb.tmpl")
+	tmpl, err := template.New("hanami-action").Funcs(TemplateFunctions).ParseFS(templatesFS, "templates/hanami_action.rb.tmpl")
 	if err != nil {
 		return nil, fmt.Errorf("error parsing template files: %w", err)
 	}
@@ -364,7 +369,7 @@ func (g Generator) GenerateServices(swagger *openapi3.T) ([]ServiceDefinition, e
 		return nil, fmt.Errorf("error generating operation definitions: %w", err)
 	}
 
-	tmpl, err := template.New("hanami-service").Funcs(TemplateFunctions).ParseFiles("./templates/service.rb.tmpl")
+	tmpl, err := template.New("hanami-service").Funcs(TemplateFunctions).ParseFS(templatesFS, "templates/service.rb.tmpl")
 	if err != nil {
 		return nil, fmt.Errorf("error parsing template files: %w", err)
 	}
@@ -393,7 +398,7 @@ func (g Generator) GenerateContracts(swagger *openapi3.T) (*bytes.Buffer, error)
 	if err != nil {
 		return nil, fmt.Errorf("error generating contracts file template model: %w", err)
 	}
-	tmpl, err := template.New("hanami-contracts").Funcs(TemplateFunctions).ParseFiles("./templates/contracts.rb.tmpl", "./templates/fragments/attribute.rb.tmpl")
+	tmpl, err := template.New("hanami-contracts").Funcs(TemplateFunctions).ParseFS(templatesFS, "templates/contracts.rb.tmpl", "templates/fragments/attribute.rb.tmpl")
 	if err != nil {
 		return nil, fmt.Errorf("error parsing template files: %w", err)
 	}
@@ -486,7 +491,7 @@ func (g Generator) GenerateSchemas(swagger *openapi3.T) (*bytes.Buffer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error generating schemas file template model: %w", err)
 	}
-	tmpl, err := template.New("hanami-schemas").Funcs(TemplateFunctions).ParseFiles("./templates/schemas.rb.tmpl", "./templates/fragments/attribute.rb.tmpl")
+	tmpl, err := template.New("hanami-schemas").Funcs(TemplateFunctions).ParseFS(templatesFS, "templates/schemas.rb.tmpl", "templates/fragments/attribute.rb.tmpl")
 	if err != nil {
 		return nil, fmt.Errorf("error parsing template files: %w", err)
 	}
