@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"errors"
+	"flag"
 	"fmt"
 	"github.com/deepmap/oapi-codegen/pkg/codegen"
 	"github.com/deepmap/oapi-codegen/pkg/util"
@@ -14,6 +15,23 @@ import (
 	"text/template"
 )
 
+type args struct {
+	openAPISpecFilePath string
+	appName             string
+}
+
+func parseArgs() args {
+	inputFilePtr := flag.String("inputFile", "", "file path of OpenAPI spec")
+	appNamePtr := flag.String("appName", "HanamiApp", "name of the top-level Hanami app module")
+
+	flag.Parse()
+
+	return args{
+		openAPISpecFilePath: *inputFilePtr,
+		appName:             *appNamePtr,
+	}
+}
+
 func main() {
 	var err error
 	defer func() {
@@ -22,15 +40,15 @@ func main() {
 		}
 	}()
 
-	// todo, can pass in the file name as a command line arg
-	swagger, err := LoadSwagger("./petstore_simple.yaml")
+	config := parseArgs()
+
+	swagger, err := LoadSwagger(config.openAPISpecFilePath)
 	if err != nil {
 		return
 	}
 
-	// todo, pass in the AppName as a command line arg too
 	g := Generator{
-		AppName: "PetstoreApp",
+		AppName: config.appName,
 	}
 
 	routesBuf, err := g.GenerateRoutes(swagger)
@@ -375,7 +393,7 @@ func (g Generator) GenerateContracts(swagger *openapi3.T) (*bytes.Buffer, error)
 	if err != nil {
 		return nil, fmt.Errorf("error generating contracts file template model: %w", err)
 	}
-	tmpl, err := template.New("hanami-contracts").Funcs(TemplateFunctions).ParseFiles("./templates/contracts.rb.tmpl")
+	tmpl, err := template.New("hanami-contracts").Funcs(TemplateFunctions).ParseFiles("./templates/contracts.rb.tmpl", "./templates/fragments/attribute.rb.tmpl")
 	if err != nil {
 		return nil, fmt.Errorf("error parsing template files: %w", err)
 	}
@@ -468,7 +486,7 @@ func (g Generator) GenerateSchemas(swagger *openapi3.T) (*bytes.Buffer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error generating schemas file template model: %w", err)
 	}
-	tmpl, err := template.New("hanami-schemas").Funcs(TemplateFunctions).ParseFiles("./templates/schemas.rb.tmpl")
+	tmpl, err := template.New("hanami-schemas").Funcs(TemplateFunctions).ParseFiles("./templates/schemas.rb.tmpl", "./templates/fragments/attribute.rb.tmpl")
 	if err != nil {
 		return nil, fmt.Errorf("error parsing template files: %w", err)
 	}
@@ -562,22 +580,4 @@ func isRef(propertyValue *openapi3.SchemaRef) bool {
 
 func GenerateReferencedSchemaType(swagger *openapi3.T, schemaRef *openapi3.SchemaRef) string {
 	return fmt.Sprintf("Schemas::%s", schemaRef.Value.Title)
-}
-
-func GenerateHashBlock(swagger *openapi3.T, schemaRef *openapi3.SchemaRef) string {
-	attributeDefinitions := GenerateAttributeDefinitions(swagger, schemaRef)
-	tmpl, _ := template.New("dry-hash").Funcs(TemplateFunctions).ParseFiles("./templates/hash.rb.tmpl")
-	var buf bytes.Buffer
-	w := bufio.NewWriter(&buf)
-	err := tmpl.ExecuteTemplate(w, "hash.rb.tmpl", attributeDefinitions)
-	if err != nil {
-		log.Println("could not execute template dry-hash")
-	}
-
-	if err = w.Flush(); err != nil {
-		// todo, fix the error handling
-		fmt.Errorf("error flushing output buffer")
-	}
-
-	return buf.String()
 }

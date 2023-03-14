@@ -1,14 +1,5 @@
 require "dry/validation"
 
-{{- define "attribute"}}
-  {{if .Required}}required{{else}}optional{{end}}(:{{.AttributeName | toSnake }}).{{.Verb}}({{.AttributeType}}){{if .HasChildren}} do
-  {{- range .NestedAttributes}}
-    {{- template "attribute" . -}}
-  {{- end}}
-  end
-  {{- end}}
-{{- end}}
-
 module {{.AppName}}
   module Actions
     module Contracts

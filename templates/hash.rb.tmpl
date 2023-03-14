@@ -1,5 +1,0 @@
-do
-  {{- range .}}
-  required(:{{.AttributeName | toSnake}}).{{.Verb}}({{.AttributeType}}) {{.Block}}
-  {{- end}}
-end
