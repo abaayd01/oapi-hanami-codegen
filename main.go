@@ -36,6 +36,11 @@ func parseArgs() args {
 	}
 }
 
+// hmm inject these into generator?
+var templatesFilePath = "templates"
+var routesTemplateFileName = "routes.rb.tmpl"
+var actionsTemplateFileName = "action.rb.tmpl"
+
 func main() {
 	var err error
 	defer func() {
@@ -56,10 +61,21 @@ func main() {
 		return
 	}
 
+	// todo: write a func to load these templates
+	templates, err := template.New("routes").Funcs(TemplateFunctions).ParseFS(
+		templatesFS,
+		templatesFilePath+"/"+routesTemplateFileName,
+		templatesFilePath+"/"+actionsTemplateFileName,
+	)
+	if err != nil {
+		return
+	}
+
 	g := Generator{
 		AppName:              config.appName,
 		OperationDefinitions: operationDefinitions,
 		Swagger:              swagger,
+		Templates:            templates,
 	}
 
 	routesFileBuf, err := g.GenerateRoutesFile()
@@ -105,6 +121,7 @@ type Generator struct {
 	AppName              string
 	OperationDefinitions []codegen.OperationDefinition
 	Swagger              *openapi3.T
+	Templates            *template.Template
 }
 
 func LoadSwagger(filePath string) (*openapi3.T, error) {
@@ -267,18 +284,20 @@ func (g Generator) GenerateRoutesFile() (*bytes.Buffer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error generating routes file template model: %w", err)
 	}
+	return g.ExecuteRoutesFileTemplate(routesFileTemplateModel)
+}
 
-	tmpl, err := template.New("hanami-codegen").Funcs(TemplateFunctions).ParseFS(templatesFS, "templates/hanami_routes.rb.tmpl")
-	if err != nil {
-		return nil, fmt.Errorf("error parsing template files: %w", err)
-	}
+func (g Generator) ExecuteRoutesFileTemplate(model *RoutesFileTemplateModel) (*bytes.Buffer, error) {
+	return ExecuteTemplate(g.Templates, routesTemplateFileName, model)
+}
 
+func ExecuteTemplate(tmpl *template.Template, filePath string, model any) (*bytes.Buffer, error) {
 	var buf bytes.Buffer
 	w := bufio.NewWriter(&buf)
-	if err = tmpl.ExecuteTemplate(w, "hanami_routes.rb.tmpl", routesFileTemplateModel); err != nil {
-		return nil, fmt.Errorf("error executing hanami_routes template: %w", err)
+	if err := tmpl.ExecuteTemplate(w, filePath, model); err != nil {
+		return nil, fmt.Errorf("error executing %s template: %w", filePath, err)
 	}
-	if err = w.Flush(); err != nil {
+	if err := w.Flush(); err != nil {
 		return nil, fmt.Errorf("error flushing output buffer: %w", err)
 	}
 
@@ -312,28 +331,21 @@ func NewActionDefinition(appName string, operationDefinition codegen.OperationDe
 }
 
 func (g Generator) GenerateActionFiles() ([]ActionDefinition, error) {
-	tmpl, err := template.New("hanami-action").Funcs(TemplateFunctions).ParseFS(templatesFS, "templates/hanami_action.rb.tmpl")
-	if err != nil {
-		return nil, fmt.Errorf("error parsing template files: %w", err)
-	}
-
 	var actionDefinitions []ActionDefinition
 	for _, operationDefinition := range g.OperationDefinitions {
 		actionTemplateModel := NewActionTemplateModel(g.AppName, operationDefinition)
-
-		var buf bytes.Buffer
-		w := bufio.NewWriter(&buf)
-		if err = tmpl.ExecuteTemplate(w, "hanami_action.rb.tmpl", actionTemplateModel); err != nil {
-			return nil, fmt.Errorf("error executing hanami_action template: %w", err)
+		out, err := g.ExecuteActionFileTemplate(actionTemplateModel)
+		if err != nil {
+			return nil, err
 		}
-		if err = w.Flush(); err != nil {
-			return nil, fmt.Errorf("error flushing output buffer: %w", err)
-		}
-
-		actionDefinitions = append(actionDefinitions, NewActionDefinition(g.AppName, operationDefinition, &buf))
+		actionDefinitions = append(actionDefinitions, NewActionDefinition(g.AppName, operationDefinition, out))
 	}
 
 	return actionDefinitions, nil
+}
+
+func (g Generator) ExecuteActionFileTemplate(model ActionTemplateModel) (*bytes.Buffer, error) {
+	return ExecuteTemplate(g.Templates, actionsTemplateFileName, model)
 }
 
 type ServiceTemplateModel struct {
