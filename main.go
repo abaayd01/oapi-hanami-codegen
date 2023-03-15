@@ -51,20 +51,28 @@ func main() {
 		return
 	}
 
+	operationDefinitions, err := codegen.OperationDefinitions(swagger)
+	if err != nil {
+		return
+	}
+
 	g := Generator{
-		AppName: config.appName,
+		AppName:              config.appName,
+		OperationDefinitions: operationDefinitions,
+		Swagger:              swagger,
 	}
 
-	routesBuf, err := g.GenerateRoutes(swagger)
-	if err != nil {
-		return
-	}
-	err = WriteRoutesFile(routesBuf)
+	routes, err := g.GenerateRoutes()
 	if err != nil {
 		return
 	}
 
-	actions, err := g.GenerateActions(swagger)
+	err = WriteRoutesFile(routes)
+	if err != nil {
+		return
+	}
+
+	actions, err := g.GenerateActions()
 	if err != nil {
 		return
 	}
@@ -73,19 +81,19 @@ func main() {
 		return
 	}
 
-	services, err := g.GenerateServices(swagger)
+	services, err := g.GenerateServices()
 	if err != nil {
 		return
 	}
 	err = WriteServiceFiles(services)
 
-	contracts, err := g.GenerateContracts(swagger)
+	contracts, err := g.GenerateContracts()
 	if err != nil {
 		return
 	}
 	err = WriteContractsFile(contracts)
 
-	schemas, err := g.GenerateSchemas(swagger)
+	schemas, err := g.GenerateSchemas()
 	if err != nil {
 		return
 	}
@@ -93,8 +101,10 @@ func main() {
 }
 
 type Generator struct {
-	// put extra config and stuff in here I guess
-	AppName string
+	// put extra config and stuff in here
+	AppName              string
+	OperationDefinitions []codegen.OperationDefinition
+	Swagger              *openapi3.T
 }
 
 func LoadSwagger(filePath string) (*openapi3.T, error) {
@@ -237,14 +247,9 @@ func toRackPath(codegenPath string) string {
 	return out
 }
 
-func NewRoutesFileTemplateModel(appName string, swagger *openapi3.T) (*RoutesFileTemplateModel, error) {
-	ops, err := codegen.OperationDefinitions(swagger)
-	if err != nil {
-		return nil, fmt.Errorf("error generating operation definitions: %w", err)
-	}
-
+func NewRoutesFileTemplateModel(appName string, operationDefinitions []codegen.OperationDefinition) (*RoutesFileTemplateModel, error) {
 	var routeTemplateModels []RouteTemplateModel
-	for _, op := range ops {
+	for _, op := range operationDefinitions {
 		routeTemplateModels = append(routeTemplateModels, RouteTemplateModel{
 			Path:                toRackPath(op.Path),
 			OperationDefinition: op,
@@ -257,14 +262,13 @@ func NewRoutesFileTemplateModel(appName string, swagger *openapi3.T) (*RoutesFil
 	}, nil
 }
 
-func (g Generator) GenerateRoutes(swagger *openapi3.T) (*bytes.Buffer, error) {
-	routesFileTemplateModel, err := NewRoutesFileTemplateModel(g.AppName, swagger)
+func (g Generator) GenerateRoutes() (*bytes.Buffer, error) {
+	routesFileTemplateModel, err := NewRoutesFileTemplateModel(g.AppName, g.OperationDefinitions)
 	if err != nil {
 		return nil, fmt.Errorf("error generating routes file template model: %w", err)
 	}
 
 	tmpl, err := template.New("hanami-codegen").Funcs(TemplateFunctions).ParseFS(templatesFS, "templates/hanami_routes.rb.tmpl")
-	//tmpl, err := template.New("hanami-codegen").Funcs(TemplateFunctions).ParseFiles("./templates/hanami_routes.rb.tmpl")
 	if err != nil {
 		return nil, fmt.Errorf("error parsing template files: %w", err)
 	}
@@ -307,19 +311,14 @@ func NewActionDefinition(appName string, operationDefinition codegen.OperationDe
 	}
 }
 
-func (g Generator) GenerateActions(swagger *openapi3.T) ([]ActionDefinition, error) {
-	ops, err := codegen.OperationDefinitions(swagger)
-	if err != nil {
-		return nil, fmt.Errorf("error generating operation definitions: %w", err)
-	}
-
+func (g Generator) GenerateActions() ([]ActionDefinition, error) {
 	tmpl, err := template.New("hanami-action").Funcs(TemplateFunctions).ParseFS(templatesFS, "templates/hanami_action.rb.tmpl")
 	if err != nil {
 		return nil, fmt.Errorf("error parsing template files: %w", err)
 	}
 
 	var actionDefinitions []ActionDefinition
-	for _, operationDefinition := range ops {
+	for _, operationDefinition := range g.OperationDefinitions {
 		actionTemplateModel := NewActionTemplateModel(g.AppName, operationDefinition)
 
 		var buf bytes.Buffer
@@ -363,19 +362,14 @@ func NewServiceDefinition(serviceTemplateModel ServiceTemplateModel, generatedCo
 	}
 }
 
-func (g Generator) GenerateServices(swagger *openapi3.T) ([]ServiceDefinition, error) {
-	ops, err := codegen.OperationDefinitions(swagger)
-	if err != nil {
-		return nil, fmt.Errorf("error generating operation definitions: %w", err)
-	}
-
+func (g Generator) GenerateServices() ([]ServiceDefinition, error) {
 	tmpl, err := template.New("hanami-service").Funcs(TemplateFunctions).ParseFS(templatesFS, "templates/service.rb.tmpl")
 	if err != nil {
 		return nil, fmt.Errorf("error parsing template files: %w", err)
 	}
 
 	var serviceDefinitions []ServiceDefinition
-	for _, operationDefinition := range ops {
+	for _, operationDefinition := range g.OperationDefinitions {
 		serviceTemplateModel := NewServiceTemplateModel(g.AppName, operationDefinition)
 
 		var buf bytes.Buffer
@@ -393,8 +387,8 @@ func (g Generator) GenerateServices(swagger *openapi3.T) ([]ServiceDefinition, e
 	return serviceDefinitions, nil
 }
 
-func (g Generator) GenerateContracts(swagger *openapi3.T) (*bytes.Buffer, error) {
-	model, err := NewContractsFileTemplateModel(g.AppName, swagger)
+func (g Generator) GenerateContracts() (*bytes.Buffer, error) {
+	model, err := NewContractsFileTemplateModel(g.AppName, g.OperationDefinitions)
 	if err != nil {
 		return nil, fmt.Errorf("error generating contracts file template model: %w", err)
 	}
@@ -425,31 +419,26 @@ type ContractsFileTemplateModel struct {
 	Contracts []ContractTemplateModel
 }
 
-func NewContractsFileTemplateModel(appName string, swagger *openapi3.T) (*ContractsFileTemplateModel, error) {
-	ops, err := codegen.OperationDefinitions(swagger)
-	if err != nil {
-		return nil, fmt.Errorf("error generating operation definitions: %w", err)
-	}
-
+func NewContractsFileTemplateModel(appName string, operationDefinitions []codegen.OperationDefinition) (*ContractsFileTemplateModel, error) {
 	var contracts []ContractTemplateModel
-	for _, operationDefinition := range ops {
+	for _, operationDefinition := range operationDefinitions {
 		requestContract := ContractTemplateModel{
 			ContractName: fmt.Sprintf("%sRequestContract", operationDefinition.OperationId),
 		}
 
 		// injecting the request body attributes
 		if operationDefinition.Spec.RequestBody != nil {
-			requestContract.Attributes = GenerateAttributeDefinitions(swagger, operationDefinition.Spec.RequestBody.Value.Content["application/json"].Schema)
+			requestContract.Attributes = GenerateAttributeDefinitions(operationDefinition.Spec.RequestBody.Value.Content["application/json"].Schema)
 		}
 
 		// injecting the query & path params
 		for _, pathParam := range operationDefinition.Spec.Parameters {
-			requestContract.Attributes = append(requestContract.Attributes, GenerateAttributeDefinition(swagger, pathParam.Value.Name, pathParam.Value.Schema, pathParam.Value.Required))
+			requestContract.Attributes = append(requestContract.Attributes, GenerateAttributeDefinition(pathParam.Value.Name, pathParam.Value.Schema, pathParam.Value.Required))
 		}
 
 		responseContract := ContractTemplateModel{
 			ContractName: fmt.Sprintf("%sResponseContract", operationDefinition.OperationId),
-			Attributes:   GenerateAttributeDefinitions(swagger, operationDefinition.Spec.Responses["200"].Value.Content["application/json"].Schema),
+			Attributes:   GenerateAttributeDefinitions(operationDefinition.Spec.Responses["200"].Value.Content["application/json"].Schema),
 		}
 
 		contracts = append(contracts, requestContract, responseContract)
@@ -477,7 +466,7 @@ func NewSchemasFileTemplateModel(appName string, swagger *openapi3.T) (SchemasFi
 	for key, value := range swagger.Components.Schemas {
 		schemaTemplateModel := SchemaTemplateModel{
 			SchemaName: key,
-			Attributes: GenerateAttributeDefinitions(swagger, value),
+			Attributes: GenerateAttributeDefinitions(value),
 		}
 
 		schemas = append(schemas, schemaTemplateModel)
@@ -486,8 +475,8 @@ func NewSchemasFileTemplateModel(appName string, swagger *openapi3.T) (SchemasFi
 	return SchemasFileTemplateModel{AppName: appName, Schemas: schemas}, nil
 }
 
-func (g Generator) GenerateSchemas(swagger *openapi3.T) (*bytes.Buffer, error) {
-	model, err := NewSchemasFileTemplateModel(g.AppName, swagger)
+func (g Generator) GenerateSchemas() (*bytes.Buffer, error) {
+	model, err := NewSchemasFileTemplateModel(g.AppName, g.Swagger)
 	if err != nil {
 		return nil, fmt.Errorf("error generating schemas file template model: %w", err)
 	}
@@ -527,20 +516,20 @@ func IsInArray(arr []string, val string) bool {
 	return false
 }
 
-func GenerateAttributeDefinitions(swagger *openapi3.T, schemaRef *openapi3.SchemaRef) []AttributeDefinition {
+func GenerateAttributeDefinitions(schemaRef *openapi3.SchemaRef) []AttributeDefinition {
 	if schemaRef == nil {
 		return nil
 	}
 	var attributeDefinitions []AttributeDefinition
 	for propertyKey, propertyValue := range schemaRef.Value.Properties {
-		attributeDefinition := GenerateAttributeDefinition(swagger, propertyKey, propertyValue, IsInArray(schemaRef.Value.Required, propertyKey))
+		attributeDefinition := GenerateAttributeDefinition(propertyKey, propertyValue, IsInArray(schemaRef.Value.Required, propertyKey))
 		attributeDefinitions = append(attributeDefinitions, attributeDefinition)
 	}
 
 	return attributeDefinitions
 }
 
-func GenerateAttributeDefinition(swagger *openapi3.T, key string, schemaRef *openapi3.SchemaRef, required bool) AttributeDefinition {
+func GenerateAttributeDefinition(key string, schemaRef *openapi3.SchemaRef, required bool) AttributeDefinition {
 	attributeDefinition := AttributeDefinition{
 		AttributeName:    key,
 		AttributeType:    "",
@@ -551,7 +540,7 @@ func GenerateAttributeDefinition(swagger *openapi3.T, key string, schemaRef *ope
 	}
 
 	if isRef(schemaRef) {
-		attributeDefinition.AttributeType = GenerateReferencedSchemaType(swagger, schemaRef)
+		attributeDefinition.AttributeType = GenerateReferencedSchemaType(schemaRef)
 		return attributeDefinition
 	}
 
@@ -565,7 +554,7 @@ func GenerateAttributeDefinition(swagger *openapi3.T, key string, schemaRef *ope
 		attributeDefinition.Verb = "value"
 	case "array":
 		attributeDefinition.Verb = "array"
-		itemsAttributeDefinition := GenerateAttributeDefinition(swagger, "", schemaRef.Value.Items, IsInArray(schemaRef.Value.Required, key)) // todo: don't hardcode
+		itemsAttributeDefinition := GenerateAttributeDefinition("", schemaRef.Value.Items, IsInArray(schemaRef.Value.Required, key)) // todo: don't hardcode
 		attributeDefinition.AttributeType = itemsAttributeDefinition.AttributeType
 		attributeDefinition.NestedAttributes = itemsAttributeDefinition.NestedAttributes
 		attributeDefinition.HasChildren = len(itemsAttributeDefinition.NestedAttributes) > 0
@@ -573,7 +562,7 @@ func GenerateAttributeDefinition(swagger *openapi3.T, key string, schemaRef *ope
 		attributeDefinition.AttributeType = ":hash"
 		attributeDefinition.Verb = "value"
 		attributeDefinition.HasChildren = true
-		attributeDefinition.NestedAttributes = GenerateAttributeDefinitions(swagger, schemaRef)
+		attributeDefinition.NestedAttributes = GenerateAttributeDefinitions(schemaRef)
 	}
 
 	return attributeDefinition
@@ -583,6 +572,6 @@ func isRef(propertyValue *openapi3.SchemaRef) bool {
 	return propertyValue.Ref != ""
 }
 
-func GenerateReferencedSchemaType(swagger *openapi3.T, schemaRef *openapi3.SchemaRef) string {
+func GenerateReferencedSchemaType(schemaRef *openapi3.SchemaRef) string {
 	return fmt.Sprintf("Schemas::%s", schemaRef.Value.Title)
 }
