@@ -62,42 +62,42 @@ func main() {
 		Swagger:              swagger,
 	}
 
-	routes, err := g.GenerateRoutes()
+	routesFileBuf, err := g.GenerateRoutesFile()
 	if err != nil {
 		return
 	}
 
-	err = WriteRoutesFile(routes)
+	err = WriteRoutesFile(routesFileBuf)
 	if err != nil {
 		return
 	}
 
-	actions, err := g.GenerateActions()
+	actionFileBufs, err := g.GenerateActionFiles()
 	if err != nil {
 		return
 	}
-	err = WriteActionFiles(actions)
+	err = WriteActionFiles(actionFileBufs)
 	if err != nil {
 		return
 	}
 
-	services, err := g.GenerateServices()
+	serviceFileBufs, err := g.GenerateServiceFiles()
 	if err != nil {
 		return
 	}
-	err = WriteServiceFiles(services)
+	err = WriteServiceFiles(serviceFileBufs)
 
-	contracts, err := g.GenerateContracts()
+	contractsFileBuf, err := g.GenerateContractsFile()
 	if err != nil {
 		return
 	}
-	err = WriteContractsFile(contracts)
+	err = WriteContractsFile(contractsFileBuf)
 
-	schemas, err := g.GenerateSchemas()
+	schemasFile, err := g.GenerateSchemasFile()
 	if err != nil {
 		return
 	}
-	err = WriteSchemasFile(schemas)
+	err = WriteSchemasFile(schemasFile)
 }
 
 type Generator struct {
@@ -262,7 +262,7 @@ func NewRoutesFileTemplateModel(appName string, operationDefinitions []codegen.O
 	}, nil
 }
 
-func (g Generator) GenerateRoutes() (*bytes.Buffer, error) {
+func (g Generator) GenerateRoutesFile() (*bytes.Buffer, error) {
 	routesFileTemplateModel, err := NewRoutesFileTemplateModel(g.AppName, g.OperationDefinitions)
 	if err != nil {
 		return nil, fmt.Errorf("error generating routes file template model: %w", err)
@@ -311,7 +311,7 @@ func NewActionDefinition(appName string, operationDefinition codegen.OperationDe
 	}
 }
 
-func (g Generator) GenerateActions() ([]ActionDefinition, error) {
+func (g Generator) GenerateActionFiles() ([]ActionDefinition, error) {
 	tmpl, err := template.New("hanami-action").Funcs(TemplateFunctions).ParseFS(templatesFS, "templates/hanami_action.rb.tmpl")
 	if err != nil {
 		return nil, fmt.Errorf("error parsing template files: %w", err)
@@ -362,7 +362,7 @@ func NewServiceDefinition(serviceTemplateModel ServiceTemplateModel, generatedCo
 	}
 }
 
-func (g Generator) GenerateServices() ([]ServiceDefinition, error) {
+func (g Generator) GenerateServiceFiles() ([]ServiceDefinition, error) {
 	tmpl, err := template.New("hanami-service").Funcs(TemplateFunctions).ParseFS(templatesFS, "templates/service.rb.tmpl")
 	if err != nil {
 		return nil, fmt.Errorf("error parsing template files: %w", err)
@@ -387,7 +387,7 @@ func (g Generator) GenerateServices() ([]ServiceDefinition, error) {
 	return serviceDefinitions, nil
 }
 
-func (g Generator) GenerateContracts() (*bytes.Buffer, error) {
+func (g Generator) GenerateContractsFile() (*bytes.Buffer, error) {
 	model, err := NewContractsFileTemplateModel(g.AppName, g.OperationDefinitions)
 	if err != nil {
 		return nil, fmt.Errorf("error generating contracts file template model: %w", err)
@@ -475,7 +475,7 @@ func NewSchemasFileTemplateModel(appName string, swagger *openapi3.T) (SchemasFi
 	return SchemasFileTemplateModel{AppName: appName, Schemas: schemas}, nil
 }
 
-func (g Generator) GenerateSchemas() (*bytes.Buffer, error) {
+func (g Generator) GenerateSchemasFile() (*bytes.Buffer, error) {
 	model, err := NewSchemasFileTemplateModel(g.AppName, g.Swagger)
 	if err != nil {
 		return nil, fmt.Errorf("error generating schemas file template model: %w", err)
