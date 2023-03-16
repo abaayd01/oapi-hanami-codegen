@@ -5,24 +5,36 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 )
 
-func WriteRoutesFile(data *bytes.Buffer) error {
-	err := os.MkdirAll("gen/config/", os.ModePerm)
-	if err != nil {
-		return fmt.Errorf("error creating directory gen/config: %w", err)
-	}
-	return writeFile("gen/config/routes.rb", data)
+type Writer struct {
+	OutputDir string
 }
 
-func WriteActionFiles(actions []ActionDefinition) error {
-	// make sure the actions directory exists
-	err := os.MkdirAll("gen/actions/", os.ModePerm)
-	if err != nil {
-		return fmt.Errorf("error creating directory gen/actions: %w", err)
+func NewWriter(outputDir string) Writer {
+	trimmedOutputDir := strings.Trim(outputDir, "/")
+	return Writer{
+		OutputDir: trimmedOutputDir,
 	}
+}
+
+func (w Writer) WriteRoutesFile(data *bytes.Buffer) error {
+	err := w.createConfigDirIfNotExists()
+	if err != nil {
+		return err
+	}
+	return writeFile(w.OutputDir+"/config/routes.rb", data)
+}
+
+func (w Writer) WriteActionFiles(actions []ActionDefinition) error {
+	err := w.createActionsDirIfNotExists()
+	if err != nil {
+		return err
+	}
+
 	for _, actionDefinition := range actions {
-		actionDirectory := fmt.Sprintf("gen/actions/%s/", toSnake(actionDefinition.ModuleName))
+		actionDirectory := fmt.Sprintf("%s/actions/%s/", w.OutputDir, toSnake(actionDefinition.ModuleName))
 		err = os.MkdirAll(actionDirectory, os.ModePerm)
 		if err != nil {
 			return fmt.Errorf("error creating action directory %s: %w", actionDirectory, err)
@@ -37,14 +49,14 @@ func WriteActionFiles(actions []ActionDefinition) error {
 	return nil
 }
 
-func WriteServiceFiles(services []ServiceDefinition) error {
-	// make sure the actions directory exists
-	err := os.MkdirAll("gen/actions/", os.ModePerm)
+func (w Writer) WriteServiceFiles(services []ServiceDefinition) error {
+	err := w.createActionsDirIfNotExists()
 	if err != nil {
-		return fmt.Errorf("error creating directory gen/actions: %w", err)
+		return err
 	}
+
 	for _, serviceDefinition := range services {
-		parentDir := fmt.Sprintf("gen/actions/%s/", toSnake(serviceDefinition.ModuleName))
+		parentDir := fmt.Sprintf("%s/actions/%s/", w.OutputDir, toSnake(serviceDefinition.ModuleName))
 		err = os.MkdirAll(parentDir, os.ModePerm)
 		if err != nil {
 			return fmt.Errorf("error creating parent directory %s: %w", parentDir, err)
@@ -54,7 +66,8 @@ func WriteServiceFiles(services []ServiceDefinition) error {
 
 		fileExists := doesFileExist(serviceFilePath)
 		if fileExists {
-			continue // don't write the thing, we don't want to overwrite service files
+			// don't write the thing, we don't want to overwrite service files if they already exist
+			continue
 		}
 
 		err = writeFile(serviceFilePath, serviceDefinition.GeneratedCode)
@@ -65,20 +78,38 @@ func WriteServiceFiles(services []ServiceDefinition) error {
 	return nil
 }
 
-func WriteContractsFile(data *bytes.Buffer) error {
-	err := os.MkdirAll("gen/actions/", os.ModePerm)
+func (w Writer) WriteContractsFile(data *bytes.Buffer) error {
+	err := w.createActionsDirIfNotExists()
 	if err != nil {
-		return fmt.Errorf("error creating directory gen/actions: %w", err)
+		return err
 	}
-	return writeFile("gen/actions/contracts.rb", data)
+
+	return writeFile(w.OutputDir+"/actions/contracts.rb", data)
 }
 
-func WriteSchemasFile(data *bytes.Buffer) error {
-	err := os.MkdirAll("gen/actions/", os.ModePerm)
+func (w Writer) WriteSchemasFile(data *bytes.Buffer) error {
+	err := w.createActionsDirIfNotExists()
 	if err != nil {
-		return fmt.Errorf("error creating directory gen/actions: %w", err)
+		return err
 	}
-	return writeFile("gen/actions/schemas.rb", data)
+
+	return writeFile(w.OutputDir+"/actions/schemas.rb", data)
+}
+
+func (w Writer) createConfigDirIfNotExists() error {
+	err := os.MkdirAll(w.OutputDir+"/config/", os.ModePerm)
+	if err != nil {
+		return fmt.Errorf("error creating directory %s/config: %w", w.OutputDir, err)
+	}
+	return nil
+}
+
+func (w Writer) createActionsDirIfNotExists() error {
+	err := os.MkdirAll(w.OutputDir+"/actions/", os.ModePerm)
+	if err != nil {
+		return fmt.Errorf("error creating directory %s/actions: %w", w.OutputDir, err)
+	}
+	return nil
 }
 
 func writeFile(filePath string, data *bytes.Buffer) error {
