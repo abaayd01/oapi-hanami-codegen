@@ -39,7 +39,10 @@ func parseArgs() args {
 // hmm inject these into generator?
 var templatesFilePath = "templates"
 var routesTemplateFileName = "routes.rb.tmpl"
-var actionsTemplateFileName = "action.rb.tmpl"
+var actionTemplateFileName = "action.rb.tmpl"
+var serviceTemplateFileName = "service.rb.tmpl"
+var contractsTemplateFileName = "contracts.rb.tmpl"
+var schemasTemplateFileName = "schemas.rb.tmpl"
 
 func main() {
 	var err error
@@ -64,9 +67,10 @@ func main() {
 	// todo: write a func to load these templates
 	templates, err := template.New("routes").Funcs(TemplateFunctions).ParseFS(
 		templatesFS,
-		templatesFilePath+"/"+routesTemplateFileName,
-		templatesFilePath+"/"+actionsTemplateFileName,
+		templatesFilePath+"/*.tmpl",
+		templatesFilePath+"/fragments/*.tmpl",
 	)
+
 	if err != nil {
 		return
 	}
@@ -264,7 +268,7 @@ func toRackPath(codegenPath string) string {
 	return out
 }
 
-func NewRoutesFileTemplateModel(appName string, operationDefinitions []codegen.OperationDefinition) (*RoutesFileTemplateModel, error) {
+func NewRoutesFileTemplateModel(appName string, operationDefinitions []codegen.OperationDefinition) (RoutesFileTemplateModel, error) {
 	var routeTemplateModels []RouteTemplateModel
 	for _, op := range operationDefinitions {
 		routeTemplateModels = append(routeTemplateModels, RouteTemplateModel{
@@ -273,7 +277,7 @@ func NewRoutesFileTemplateModel(appName string, operationDefinitions []codegen.O
 		})
 	}
 
-	return &RoutesFileTemplateModel{
+	return RoutesFileTemplateModel{
 		AppName: appName,
 		Routes:  routeTemplateModels,
 	}, nil
@@ -287,21 +291,8 @@ func (g Generator) GenerateRoutesFile() (*bytes.Buffer, error) {
 	return g.ExecuteRoutesFileTemplate(routesFileTemplateModel)
 }
 
-func (g Generator) ExecuteRoutesFileTemplate(model *RoutesFileTemplateModel) (*bytes.Buffer, error) {
+func (g Generator) ExecuteRoutesFileTemplate(model RoutesFileTemplateModel) (*bytes.Buffer, error) {
 	return ExecuteTemplate(g.Templates, routesTemplateFileName, model)
-}
-
-func ExecuteTemplate(tmpl *template.Template, filePath string, model any) (*bytes.Buffer, error) {
-	var buf bytes.Buffer
-	w := bufio.NewWriter(&buf)
-	if err := tmpl.ExecuteTemplate(w, filePath, model); err != nil {
-		return nil, fmt.Errorf("error executing %s template: %w", filePath, err)
-	}
-	if err := w.Flush(); err != nil {
-		return nil, fmt.Errorf("error flushing output buffer: %w", err)
-	}
-
-	return &buf, nil
 }
 
 type ActionTemplateModel struct {
@@ -334,18 +325,18 @@ func (g Generator) GenerateActionFiles() ([]ActionDefinition, error) {
 	var actionDefinitions []ActionDefinition
 	for _, operationDefinition := range g.OperationDefinitions {
 		actionTemplateModel := NewActionTemplateModel(g.AppName, operationDefinition)
-		out, err := g.ExecuteActionFileTemplate(actionTemplateModel)
+		actionFileBuf, err := g.ExecuteActionFileTemplate(actionTemplateModel)
 		if err != nil {
 			return nil, err
 		}
-		actionDefinitions = append(actionDefinitions, NewActionDefinition(g.AppName, operationDefinition, out))
+		actionDefinitions = append(actionDefinitions, NewActionDefinition(g.AppName, operationDefinition, actionFileBuf))
 	}
 
 	return actionDefinitions, nil
 }
 
 func (g Generator) ExecuteActionFileTemplate(model ActionTemplateModel) (*bytes.Buffer, error) {
-	return ExecuteTemplate(g.Templates, actionsTemplateFileName, model)
+	return ExecuteTemplate(g.Templates, actionTemplateFileName, model)
 }
 
 type ServiceTemplateModel struct {
@@ -375,28 +366,21 @@ func NewServiceDefinition(serviceTemplateModel ServiceTemplateModel, generatedCo
 }
 
 func (g Generator) GenerateServiceFiles() ([]ServiceDefinition, error) {
-	tmpl, err := template.New("hanami-service").Funcs(TemplateFunctions).ParseFS(templatesFS, "templates/service.rb.tmpl")
-	if err != nil {
-		return nil, fmt.Errorf("error parsing template files: %w", err)
-	}
-
 	var serviceDefinitions []ServiceDefinition
 	for _, operationDefinition := range g.OperationDefinitions {
 		serviceTemplateModel := NewServiceTemplateModel(g.AppName, operationDefinition)
-
-		var buf bytes.Buffer
-		w := bufio.NewWriter(&buf)
-		if err = tmpl.ExecuteTemplate(w, "service.rb.tmpl", serviceTemplateModel); err != nil {
-			return nil, fmt.Errorf("error executing service template: %w", err)
+		serviceFileBuf, err := g.ExecuteServiceFileTemplate(serviceTemplateModel)
+		if err != nil {
+			return nil, err
 		}
-		if err = w.Flush(); err != nil {
-			return nil, fmt.Errorf("error flushing output buffer: %w", err)
-		}
-
-		serviceDefinitions = append(serviceDefinitions, NewServiceDefinition(serviceTemplateModel, &buf))
+		serviceDefinitions = append(serviceDefinitions, NewServiceDefinition(serviceTemplateModel, serviceFileBuf))
 	}
 
 	return serviceDefinitions, nil
+}
+
+func (g Generator) ExecuteServiceFileTemplate(model ServiceTemplateModel) (*bytes.Buffer, error) {
+	return ExecuteTemplate(g.Templates, serviceTemplateFileName, model)
 }
 
 func (g Generator) GenerateContractsFile() (*bytes.Buffer, error) {
@@ -404,21 +388,12 @@ func (g Generator) GenerateContractsFile() (*bytes.Buffer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error generating contracts file template model: %w", err)
 	}
-	tmpl, err := template.New("hanami-contracts").Funcs(TemplateFunctions).ParseFS(templatesFS, "templates/contracts.rb.tmpl", "templates/fragments/attribute.rb.tmpl")
-	if err != nil {
-		return nil, fmt.Errorf("error parsing template files: %w", err)
-	}
 
-	var buf bytes.Buffer
-	w := bufio.NewWriter(&buf)
-	if err = tmpl.ExecuteTemplate(w, "contracts.rb.tmpl", model); err != nil {
-		return nil, fmt.Errorf("error executing hanami-contracts template: %w", err)
-	}
-	if err = w.Flush(); err != nil {
-		return nil, fmt.Errorf("error flushing output buffer: %w", err)
-	}
+	return g.ExecuteContractsFileTemplate(model)
+}
 
-	return &buf, nil
+func (g Generator) ExecuteContractsFileTemplate(model ContractsFileTemplateModel) (*bytes.Buffer, error) {
+	return ExecuteTemplate(g.Templates, contractsTemplateFileName, model)
 }
 
 type ContractTemplateModel struct {
@@ -431,7 +406,7 @@ type ContractsFileTemplateModel struct {
 	Contracts []ContractTemplateModel
 }
 
-func NewContractsFileTemplateModel(appName string, operationDefinitions []codegen.OperationDefinition) (*ContractsFileTemplateModel, error) {
+func NewContractsFileTemplateModel(appName string, operationDefinitions []codegen.OperationDefinition) (ContractsFileTemplateModel, error) {
 	var contracts []ContractTemplateModel
 	for _, operationDefinition := range operationDefinitions {
 		requestContract := ContractTemplateModel{
@@ -456,7 +431,7 @@ func NewContractsFileTemplateModel(appName string, operationDefinitions []codege
 		contracts = append(contracts, requestContract, responseContract)
 	}
 
-	return &ContractsFileTemplateModel{
+	return ContractsFileTemplateModel{
 		AppName:   appName,
 		Contracts: contracts,
 	}, nil
@@ -492,17 +467,20 @@ func (g Generator) GenerateSchemasFile() (*bytes.Buffer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error generating schemas file template model: %w", err)
 	}
-	tmpl, err := template.New("hanami-schemas").Funcs(TemplateFunctions).ParseFS(templatesFS, "templates/schemas.rb.tmpl", "templates/fragments/attribute.rb.tmpl")
-	if err != nil {
-		return nil, fmt.Errorf("error parsing template files: %w", err)
-	}
+	return g.ExecuteSchemasFileTemplate(model)
+}
 
+func (g Generator) ExecuteSchemasFileTemplate(model SchemasFileTemplateModel) (*bytes.Buffer, error) {
+	return ExecuteTemplate(g.Templates, schemasTemplateFileName, model)
+}
+
+func ExecuteTemplate(tmpl *template.Template, filePath string, model any) (*bytes.Buffer, error) {
 	var buf bytes.Buffer
 	w := bufio.NewWriter(&buf)
-	if err = tmpl.ExecuteTemplate(w, "schemas.rb.tmpl", model); err != nil {
-		return nil, fmt.Errorf("error executing hanami-schemas template: %w", err)
+	if err := tmpl.ExecuteTemplate(w, filePath, model); err != nil {
+		return nil, fmt.Errorf("error executing %s template: %w", filePath, err)
 	}
-	if err = w.Flush(); err != nil {
+	if err := w.Flush(); err != nil {
 		return nil, fmt.Errorf("error flushing output buffer: %w", err)
 	}
 
