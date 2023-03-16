@@ -329,23 +329,13 @@ type AttributeDefinition struct {
 	Required         bool
 }
 
-func IsInArray(arr []string, val string) bool {
-	for _, el := range arr {
-		if el == val {
-			return true
-		}
-	}
-
-	return false
-}
-
 func GenerateAttributeDefinitions(schemaRef *openapi3.SchemaRef) []AttributeDefinition {
 	if schemaRef == nil {
 		return nil
 	}
 	var attributeDefinitions []AttributeDefinition
 	for propertyKey, propertyValue := range schemaRef.Value.Properties {
-		attributeDefinition := GenerateAttributeDefinition(propertyKey, propertyValue, IsInArray(schemaRef.Value.Required, propertyKey))
+		attributeDefinition := GenerateAttributeDefinition(propertyKey, propertyValue, isInArray(schemaRef.Value.Required, propertyKey))
 		attributeDefinitions = append(attributeDefinitions, attributeDefinition)
 	}
 
@@ -377,7 +367,7 @@ func GenerateAttributeDefinition(key string, schemaRef *openapi3.SchemaRef, requ
 		attributeDefinition.Verb = "value"
 	case "array":
 		attributeDefinition.Verb = "array"
-		itemsAttributeDefinition := GenerateAttributeDefinition("", schemaRef.Value.Items, IsInArray(schemaRef.Value.Required, key)) // todo: don't hardcode
+		itemsAttributeDefinition := GenerateAttributeDefinition("", schemaRef.Value.Items, isInArray(schemaRef.Value.Required, key)) // todo: don't hardcode
 		attributeDefinition.AttributeType = itemsAttributeDefinition.AttributeType
 		attributeDefinition.NestedAttributes = itemsAttributeDefinition.NestedAttributes
 		attributeDefinition.HasChildren = len(itemsAttributeDefinition.NestedAttributes) > 0
@@ -391,10 +381,20 @@ func GenerateAttributeDefinition(key string, schemaRef *openapi3.SchemaRef, requ
 	return attributeDefinition
 }
 
+func GenerateReferencedSchemaType(schemaRef *openapi3.SchemaRef) string {
+	return fmt.Sprintf("Schemas::%s", schemaRef.Value.Title)
+}
+
 func isRef(propertyValue *openapi3.SchemaRef) bool {
 	return propertyValue.Ref != ""
 }
 
-func GenerateReferencedSchemaType(schemaRef *openapi3.SchemaRef) string {
-	return fmt.Sprintf("Schemas::%s", schemaRef.Value.Title)
+func isInArray(arr []string, val string) bool {
+	for _, el := range arr {
+		if el == val {
+			return true
+		}
+	}
+
+	return false
 }
