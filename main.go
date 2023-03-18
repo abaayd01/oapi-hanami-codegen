@@ -32,17 +32,9 @@ func mainRun() exitCode {
 		return exitError
 	}
 
-	w := NewWriter(config.outputDir)
-
 	routesFileBuf, err := g.GenerateRoutesFile()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to generate routes file: %s\n", err)
-		return exitError
-	}
-
-	err = w.WriteRoutesFile(routesFileBuf)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to write routes file: %s\n", err)
 		return exitError
 	}
 
@@ -52,20 +44,9 @@ func mainRun() exitCode {
 		return exitError
 	}
 
-	err = w.WriteActionFiles(actionFileBufs)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to write action files: %s\n", err)
-		return exitError
-	}
-
 	serviceFileBufs, err := g.GenerateServiceFiles()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to generate service files: %s\n", err)
-		return exitError
-	}
-	err = w.WriteServiceFiles(serviceFileBufs)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to write service files: %s\n", err)
 		return exitError
 	}
 
@@ -74,16 +55,39 @@ func mainRun() exitCode {
 		fmt.Fprintf(os.Stderr, "failed to generate contracts file: %s\n", err)
 		return exitError
 	}
+
+	schemasFile, err := g.GenerateSchemasFile()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "failed to generate schemas file: %s\n", err)
+		return exitError
+	}
+
+	w := NewWriter(config.outputDir)
+
+	err = w.WriteRoutesFile(routesFileBuf)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "failed to write routes file: %s\n", err)
+		return exitError
+	}
+
+	err = w.WriteActionFiles(actionFileBufs)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "failed to write action files: %s\n", err)
+		return exitError
+	}
+
+	err = w.WriteServiceFiles(serviceFileBufs)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "failed to write service files: %s\n", err)
+		return exitError
+	}
+
 	err = w.WriteContractsFile(contractsFileBuf)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to write contracts file: %s\n", err)
 		return exitError
 	}
 
-	schemasFile, err := g.GenerateSchemasFile()
-	if err != nil {
-		return exitError
-	}
 	err = w.WriteSchemasFile(schemasFile)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to write schemas file: %s\n", err)
