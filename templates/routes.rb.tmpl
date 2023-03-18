@@ -1,6 +1,6 @@
 module {{.AppName}}
     class Routes < Hanami::Routes
-        {{range .Routes}}{{.OperationDefinition.Method | lower}} "{{.Path}}", to: "{{index .OperationDefinition.Spec.Tags 0}}.{{.OperationDefinition.OperationId | toSnake}}"
+        {{range .Routes}}{{.Method | lower}} "{{.Path}}", to: "{{.ModuleName}}.{{.OperationName | toSnake}}"
         {{end}}
     end
 end

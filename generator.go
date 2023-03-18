@@ -88,8 +88,10 @@ type RoutesFileTemplateModel struct {
 }
 
 type RouteTemplateModel struct {
-	Path                string
-	OperationDefinition codegen.OperationDefinition
+	Method        string
+	ModuleName    string
+	OperationName string
+	Path          string
 }
 
 // toRackPath converts a path definition as given by OpenAPI spec to something Rack understands.
@@ -104,8 +106,10 @@ func NewRoutesFileTemplateModel(appName string, operationDefinitions []codegen.O
 	var routeTemplateModels []RouteTemplateModel
 	for _, op := range operationDefinitions {
 		routeTemplateModels = append(routeTemplateModels, RouteTemplateModel{
-			Path:                toRackPath(op.Path),
-			OperationDefinition: op,
+			Method:        op.Method,
+			ModuleName:    op.Spec.Tags[0],
+			OperationName: op.OperationId,
+			Path:          toRackPath(op.Path),
 		})
 	}
 
