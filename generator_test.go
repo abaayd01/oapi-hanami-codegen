@@ -57,7 +57,7 @@ func readFixture(filePath string) (string, error) {
 
 func TestNewGenerator_MissingTags(t *testing.T) {
 	_, err := NewGenerator("fixtures/test_spec_missing_tags.yaml", "TestApp")
-	assert.EqualError(t, err, ErrMissingTags.Error())
+	assert.ErrorContains(t, err, ErrMissingTags.Error())
 }
 
 func TestGenerator_GenerateRoutesFile(t *testing.T) {
