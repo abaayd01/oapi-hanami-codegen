@@ -50,15 +50,15 @@ func mainRun() exitCode {
 		return exitError
 	}
 
-	contractsFileBuf, err := g.GenerateContractsFile()
+	contractsFileTemplateModel, err := g.GenerateContractsFileTemplateModel()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to generate contracts file: %s\n", err)
+		fmt.Fprintf(os.Stderr, "failed to generate contracts file template model: %s\n", err)
 		return exitError
 	}
 
-	schemasFile, err := g.GenerateSchemasFile()
+	schemasFileTemplateModel, err := g.GenerateSchemasFileTemplateModel()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to generate schemas file: %s\n", err)
+		fmt.Fprintf(os.Stderr, "failed to generate schemas file template model: %s\n", err)
 		return exitError
 	}
 
@@ -85,13 +85,13 @@ func mainRun() exitCode {
 		return exitError
 	}
 
-	err = w.WriteContractsFile(contractsFileBuf)
+	err = w.WriteContractsFileFromModel(contractsFileTemplateModel)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to write contracts file: %s\n", err)
 		return exitError
 	}
 
-	err = w.WriteSchemasFile(schemasFile)
+	err = w.WriteSchemasFileFromModel(schemasFileTemplateModel)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to write schemas file: %s\n", err)
 		return exitError

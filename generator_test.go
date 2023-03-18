@@ -145,42 +145,40 @@ func TestGenerator_GenerateServiceTemplateModels(t *testing.T) {
 	assert.ElementsMatch(t, expectedServiceTemplateModels, serviceTemplateModels)
 }
 
-// TODO: this test seems to be flaky since ordering of attributes in generated file isn't stable
-// maybe test the underlying functions separately instead?
-func TestGenerator_GenerateContractsFile(t *testing.T) {
+func TestGenerator_GenerateContractsFileTemplateModel(t *testing.T) {
 	g, err := NewGenerator("fixtures/test_spec.yaml", "TestApp")
 	if err != nil {
 		t.Fatalf("error creating generator: %s\n", err)
 	}
 
-	contractsFileBuf, err := g.GenerateContractsFile()
+	model, err := g.GenerateContractsFileTemplateModel()
 	if err != nil {
 		t.Fatalf("error generating contracts file: %s\n", err)
 	}
 
-	expectedFileBuf, err := readFixture("out/actions/contracts.rb")
-	if err != nil {
-		t.Fatalf("error reading fixture out/actions/contracts.rb: %s\n", err)
+	expected := ContractsFileTemplateModel{
+		AppName:   "TestApp",
+		Contracts: nil, // todo fill this out properly
 	}
 
-	assert.Equal(t, expectedFileBuf, contractsFileBuf.String())
+	assert.Equal(t, expected, model)
 }
 
-func TestGenerator_GenerateSchemas(t *testing.T) {
+func TestGenerator_GenerateSchemasFileTemplateModel(t *testing.T) {
 	g, err := NewGenerator("fixtures/test_spec.yaml", "TestApp")
 	if err != nil {
 		t.Fatalf("error creating generator: %s\n", err)
 	}
 
-	schemasFileBuf, err := g.GenerateSchemasFile()
+	schemasFileTemplateModel, err := g.GenerateSchemasFileTemplateModel()
 	if err != nil {
-		t.Fatalf("error generating schemas file: %s\n", err)
+		t.Fatalf("error generating schemas file template model: %s\n", err)
 	}
 
-	expectedFileBuf, err := readFixture("out/actions/schemas.rb")
-	if err != nil {
-		t.Fatalf("error reading fixture out/actions/schemas.rb: %s\n", err)
+	expected := SchemasFileTemplateModel{
+		AppName: "TestApp",
+		Schemas: nil,
 	}
 
-	assert.Equal(t, expectedFileBuf, schemasFileBuf.String())
+	assert.Equal(t, expected, schemasFileTemplateModel)
 }

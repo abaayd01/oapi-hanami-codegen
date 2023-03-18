@@ -151,6 +151,19 @@ func (w Writer) WriteServiceFile(model ServiceTemplateModel, data *bytes.Buffer)
 	return nil
 }
 
+func (w Writer) WriteContractsFileFromModel(model ContractsFileTemplateModel) error {
+	buf, err := w.ExecuteContractsFileTemplate(model)
+	if err != nil {
+		return fmt.Errorf("error executing contracts file template: %w", err)
+	}
+
+	return w.WriteContractsFile(buf)
+}
+
+func (w Writer) ExecuteContractsFileTemplate(model ContractsFileTemplateModel) (*bytes.Buffer, error) {
+	return executeTemplate(w.Templates, contractsTemplateFileName, model)
+}
+
 func (w Writer) WriteContractsFile(data *bytes.Buffer) error {
 	err := w.createActionsDirIfNotExists()
 	if err != nil {
@@ -158,6 +171,19 @@ func (w Writer) WriteContractsFile(data *bytes.Buffer) error {
 	}
 
 	return writeFile(w.OutputDir+"/actions/contracts.rb", data)
+}
+
+func (w Writer) WriteSchemasFileFromModel(model SchemasFileTemplateModel) error {
+	buf, err := w.ExecuteSchemasFileTemplate(model)
+	if err != nil {
+		return fmt.Errorf("error executing schemas file template: %w", err)
+	}
+
+	return w.WriteSchemasFile(buf)
+}
+
+func (w Writer) ExecuteSchemasFileTemplate(model SchemasFileTemplateModel) (*bytes.Buffer, error) {
+	return executeTemplate(w.Templates, schemasTemplateFileName, model)
 }
 
 func (w Writer) WriteSchemasFile(data *bytes.Buffer) error {

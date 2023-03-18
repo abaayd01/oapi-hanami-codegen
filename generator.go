@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"github.com/deepmap/oapi-codegen/pkg/codegen"
@@ -152,19 +151,6 @@ func (g Generator) GenerateServiceTemplateModels() ([]ServiceTemplateModel, erro
 	return serviceTemplateModels, nil
 }
 
-func (g Generator) GenerateContractsFile() (*bytes.Buffer, error) {
-	model, err := NewContractsFileTemplateModel(g.AppName, g.OperationDefinitions)
-	if err != nil {
-		return nil, fmt.Errorf("error generating contracts file template model: %w", err)
-	}
-
-	return g.ExecuteContractsFileTemplate(model)
-}
-
-func (g Generator) ExecuteContractsFileTemplate(model ContractsFileTemplateModel) (*bytes.Buffer, error) {
-	return executeTemplate(g.Templates, contractsTemplateFileName, model)
-}
-
 type ContractTemplateModel struct {
 	ContractName string
 	Attributes   []AttributeDefinition
@@ -175,9 +161,9 @@ type ContractsFileTemplateModel struct {
 	Contracts []ContractTemplateModel
 }
 
-func NewContractsFileTemplateModel(appName string, operationDefinitions []OperationDefinition) (ContractsFileTemplateModel, error) {
+func (g Generator) GenerateContractsFileTemplateModel() (ContractsFileTemplateModel, error) {
 	var contracts []ContractTemplateModel
-	for _, operationDefinition := range operationDefinitions {
+	for _, operationDefinition := range g.OperationDefinitions {
 		requestContract := ContractTemplateModel{
 			ContractName: fmt.Sprintf("%sRequestContract", operationDefinition.OperationId),
 		}
@@ -201,7 +187,7 @@ func NewContractsFileTemplateModel(appName string, operationDefinitions []Operat
 	}
 
 	return ContractsFileTemplateModel{
-		AppName:   appName,
+		AppName:   g.AppName,
 		Contracts: contracts,
 	}, nil
 }
@@ -216,10 +202,10 @@ type SchemasFileTemplateModel struct {
 	Schemas []SchemaTemplateModel
 }
 
-func NewSchemasFileTemplateModel(appName string, swagger *openapi3.T) (SchemasFileTemplateModel, error) {
+func (g Generator) GenerateSchemasFileTemplateModel() (SchemasFileTemplateModel, error) {
 	var schemas []SchemaTemplateModel
 
-	for key, value := range swagger.Components.Schemas {
+	for key, value := range g.Swagger.Components.Schemas {
 		schemaTemplateModel := SchemaTemplateModel{
 			SchemaName: key,
 			Attributes: GenerateAttributeDefinitions(value),
@@ -228,19 +214,7 @@ func NewSchemasFileTemplateModel(appName string, swagger *openapi3.T) (SchemasFi
 		schemas = append(schemas, schemaTemplateModel)
 	}
 
-	return SchemasFileTemplateModel{AppName: appName, Schemas: schemas}, nil
-}
-
-func (g Generator) GenerateSchemasFile() (*bytes.Buffer, error) {
-	model, err := NewSchemasFileTemplateModel(g.AppName, g.Swagger)
-	if err != nil {
-		return nil, fmt.Errorf("error generating schemas file template model: %w", err)
-	}
-	return g.ExecuteSchemasFileTemplate(model)
-}
-
-func (g Generator) ExecuteSchemasFileTemplate(model SchemasFileTemplateModel) (*bytes.Buffer, error) {
-	return executeTemplate(g.Templates, schemasTemplateFileName, model)
+	return SchemasFileTemplateModel{AppName: g.AppName, Schemas: schemas}, nil
 }
 
 type AttributeDefinition struct {
