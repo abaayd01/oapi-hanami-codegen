@@ -74,7 +74,7 @@ func TestGenerator_GenerateRoutesFile(t *testing.T) {
 	assert.Equal(t, expectedFileBuf, routesFileBuf.String())
 }
 
-func TestGenerator_GenerateActionFiles(t *testing.T) {
+func TestGenerator_GenerateActionDefinitions(t *testing.T) {
 	g, err := NewGenerator("fixtures/test_spec.yaml", "TestApp")
 	if err != nil {
 		t.Fatalf("error creating generator: %s\n", err)
@@ -115,4 +115,47 @@ func TestGenerator_GenerateActionFiles(t *testing.T) {
 	}
 
 	assert.ElementsMatch(t, expectedActionDefinitions, actionDefinitions)
+}
+
+func TestGenerator_GenerateServiceDefinitions(t *testing.T) {
+	g, err := NewGenerator("fixtures/test_spec.yaml", "TestApp")
+	if err != nil {
+		t.Fatalf("error creating generator: %s\n", err)
+	}
+
+	actionDefinitions, err := g.GenerateServiceDefinitions()
+	if err != nil {
+		t.Fatalf("error generating service definitions: %s\n", err)
+	}
+
+	getBookByIdServiceFixture, err := readFixture("out/actions/books/get_book_by_id_service.rb")
+	if err != nil {
+		t.Fatalf("error reading fixture out/actions/books/get_book_by_id_service.rb: %s\n", err)
+	}
+
+	getBooksServiceFixture, err := readFixture("out/actions/books/get_books_service.rb")
+	if err != nil {
+		t.Fatalf("error reading fixture out/actions/books/get_books_service.rb: %s\n", err)
+	}
+
+	expectedServiceDefinitions := []ServiceDefinition{
+		{
+			ServiceTemplateModel: ServiceTemplateModel{
+				AppName:     "TestApp",
+				ServiceName: "GetBookByIdService",
+				ModuleName:  "books",
+			},
+			GeneratedCode: bytes.NewBufferString(getBookByIdServiceFixture),
+		},
+		{
+			ServiceTemplateModel: ServiceTemplateModel{
+				AppName:     "TestApp",
+				ServiceName: "GetBooksService",
+				ModuleName:  "books",
+			},
+			GeneratedCode: bytes.NewBufferString(getBooksServiceFixture),
+		},
+	}
+
+	assert.ElementsMatch(t, expectedServiceDefinitions, actionDefinitions)
 }
