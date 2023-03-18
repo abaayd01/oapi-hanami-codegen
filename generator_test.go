@@ -196,3 +196,22 @@ func TestGenerator_GenerateContractsFile(t *testing.T) {
 
 	assert.Equal(t, expectedFileBuf, contractsFileBuf.String())
 }
+
+func TestGenerator_GenerateSchemas(t *testing.T) {
+	g, err := NewGenerator("fixtures/test_spec.yaml", "TestApp")
+	if err != nil {
+		t.Fatalf("error creating generator: %s\n", err)
+	}
+
+	schemasFileBuf, err := g.GenerateSchemasFile()
+	if err != nil {
+		t.Fatalf("error generating schemas file: %s\n", err)
+	}
+
+	expectedFileBuf, err := readFixture("out/actions/schemas.rb")
+	if err != nil {
+		t.Fatalf("error reading fixture out/actions/schemas.rb: %s\n", err)
+	}
+
+	assert.Equal(t, expectedFileBuf, schemasFileBuf.String())
+}
