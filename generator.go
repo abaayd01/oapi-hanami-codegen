@@ -22,7 +22,6 @@ var contractsTemplateFileName = "contracts.rb.tmpl"
 var schemasTemplateFileName = "schemas.rb.tmpl"
 
 type Generator struct {
-	// put extra config and stuff in here
 	AppName              string
 	OperationDefinitions []codegen.OperationDefinition
 	Swagger              *openapi3.T
@@ -125,7 +124,7 @@ func (g Generator) GenerateRoutesFile() (*bytes.Buffer, error) {
 }
 
 func (g Generator) ExecuteRoutesFileTemplate(model RoutesFileTemplateModel) (*bytes.Buffer, error) {
-	return ExecuteTemplate(g.Templates, routesTemplateFileName, model)
+	return executeTemplate(g.Templates, routesTemplateFileName, model)
 }
 
 type ActionTemplateModel struct {
@@ -169,7 +168,7 @@ func (g Generator) GenerateActionFiles() ([]ActionDefinition, error) {
 }
 
 func (g Generator) ExecuteActionFileTemplate(model ActionTemplateModel) (*bytes.Buffer, error) {
-	return ExecuteTemplate(g.Templates, actionTemplateFileName, model)
+	return executeTemplate(g.Templates, actionTemplateFileName, model)
 }
 
 type ServiceTemplateModel struct {
@@ -213,7 +212,7 @@ func (g Generator) GenerateServiceFiles() ([]ServiceDefinition, error) {
 }
 
 func (g Generator) ExecuteServiceFileTemplate(model ServiceTemplateModel) (*bytes.Buffer, error) {
-	return ExecuteTemplate(g.Templates, serviceTemplateFileName, model)
+	return executeTemplate(g.Templates, serviceTemplateFileName, model)
 }
 
 func (g Generator) GenerateContractsFile() (*bytes.Buffer, error) {
@@ -226,7 +225,7 @@ func (g Generator) GenerateContractsFile() (*bytes.Buffer, error) {
 }
 
 func (g Generator) ExecuteContractsFileTemplate(model ContractsFileTemplateModel) (*bytes.Buffer, error) {
-	return ExecuteTemplate(g.Templates, contractsTemplateFileName, model)
+	return executeTemplate(g.Templates, contractsTemplateFileName, model)
 }
 
 type ContractTemplateModel struct {
@@ -304,10 +303,10 @@ func (g Generator) GenerateSchemasFile() (*bytes.Buffer, error) {
 }
 
 func (g Generator) ExecuteSchemasFileTemplate(model SchemasFileTemplateModel) (*bytes.Buffer, error) {
-	return ExecuteTemplate(g.Templates, schemasTemplateFileName, model)
+	return executeTemplate(g.Templates, schemasTemplateFileName, model)
 }
 
-func ExecuteTemplate(tmpl *template.Template, filePath string, model any) (*bytes.Buffer, error) {
+func executeTemplate(tmpl *template.Template, filePath string, model any) (*bytes.Buffer, error) {
 	var buf bytes.Buffer
 	w := bufio.NewWriter(&buf)
 	if err := tmpl.ExecuteTemplate(w, filePath, model); err != nil {
@@ -367,7 +366,7 @@ func GenerateAttributeDefinition(key string, schemaRef *openapi3.SchemaRef, requ
 		attributeDefinition.Verb = "value"
 	case "array":
 		attributeDefinition.Verb = "array"
-		itemsAttributeDefinition := GenerateAttributeDefinition("", schemaRef.Value.Items, isInArray(schemaRef.Value.Required, key)) // todo: don't hardcode
+		itemsAttributeDefinition := GenerateAttributeDefinition("", schemaRef.Value.Items, isInArray(schemaRef.Value.Required, key))
 		attributeDefinition.AttributeType = itemsAttributeDefinition.AttributeType
 		attributeDefinition.NestedAttributes = itemsAttributeDefinition.NestedAttributes
 		attributeDefinition.HasChildren = len(itemsAttributeDefinition.NestedAttributes) > 0
