@@ -1,9 +1,7 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
-	"embed"
 	"errors"
 	"fmt"
 	"github.com/deepmap/oapi-codegen/pkg/codegen"
@@ -12,15 +10,6 @@ import (
 	"regexp"
 	"text/template"
 )
-
-//go:embed templates/* templates/fragments/*
-var templatesFS embed.FS
-var templatesFilePath = "templates"
-var routesTemplateFileName = "routes.rb.tmpl"
-var actionTemplateFileName = "action.rb.tmpl"
-var serviceTemplateFileName = "service.rb.tmpl"
-var contractsTemplateFileName = "contracts.rb.tmpl"
-var schemasTemplateFileName = "schemas.rb.tmpl"
 
 type Generator struct {
 	AppName              string
@@ -80,18 +69,6 @@ func LoadSwagger(filePath string) (*openapi3.T, error) {
 	return swagger, nil
 }
 
-var TemplateFunctions = merge(codegen.TemplateFunctions, template.FuncMap{
-	"toSnake": toSnake,
-})
-
-func LoadTemplates() (*template.Template, error) {
-	return template.New("templates").Funcs(TemplateFunctions).ParseFS(
-		templatesFS,
-		templatesFilePath+"/*.tmpl",
-		templatesFilePath+"/fragments/*.tmpl",
-	)
-}
-
 type RoutesFileTemplateModel struct {
 	AppName string
 	Routes  []RouteTemplateModel
@@ -112,9 +89,9 @@ func toRackPath(codegenPath string) string {
 	return out
 }
 
-func NewRoutesFileTemplateModel(appName string, operationDefinitions []OperationDefinition) (RoutesFileTemplateModel, error) {
+func (g Generator) GenerateRoutesFileTemplateModel() (RoutesFileTemplateModel, error) {
 	var routeTemplateModels []RouteTemplateModel
-	for _, operationDefinition := range operationDefinitions {
+	for _, operationDefinition := range g.OperationDefinitions {
 		routeTemplateModels = append(routeTemplateModels, RouteTemplateModel{
 			Method:        operationDefinition.Method,
 			ModuleName:    operationDefinition.ModuleName,
@@ -124,17 +101,9 @@ func NewRoutesFileTemplateModel(appName string, operationDefinitions []Operation
 	}
 
 	return RoutesFileTemplateModel{
-		AppName: appName,
+		AppName: g.AppName,
 		Routes:  routeTemplateModels,
 	}, nil
-}
-
-func (g Generator) GenerateRoutesFile() (*bytes.Buffer, error) {
-	routesFileTemplateModel, err := NewRoutesFileTemplateModel(g.AppName, g.OperationDefinitions)
-	if err != nil {
-		return nil, fmt.Errorf("error generating routes file template model: %w", err)
-	}
-	return g.ExecuteRoutesFileTemplate(routesFileTemplateModel)
 }
 
 func (g Generator) ExecuteRoutesFileTemplate(model RoutesFileTemplateModel) (*bytes.Buffer, error) {
@@ -320,19 +289,6 @@ func (g Generator) GenerateSchemasFile() (*bytes.Buffer, error) {
 
 func (g Generator) ExecuteSchemasFileTemplate(model SchemasFileTemplateModel) (*bytes.Buffer, error) {
 	return executeTemplate(g.Templates, schemasTemplateFileName, model)
-}
-
-func executeTemplate(tmpl *template.Template, filePath string, model any) (*bytes.Buffer, error) {
-	var buf bytes.Buffer
-	w := bufio.NewWriter(&buf)
-	if err := tmpl.ExecuteTemplate(w, filePath, model); err != nil {
-		return nil, fmt.Errorf("error executing %s template: %w", filePath, err)
-	}
-	if err := w.Flush(); err != nil {
-		return nil, fmt.Errorf("error flushing output buffer: %w", err)
-	}
-
-	return &buf, nil
 }
 
 type AttributeDefinition struct {

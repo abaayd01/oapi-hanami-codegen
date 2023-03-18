@@ -60,23 +60,36 @@ func TestNewGenerator_MissingTags(t *testing.T) {
 	assert.ErrorContains(t, err, ErrMissingTags.Error())
 }
 
-func TestGenerator_GenerateRoutesFile(t *testing.T) {
+func TestGenerator_GenerateRoutesFileTemplateModel(t *testing.T) {
 	g, err := NewGenerator("fixtures/test_spec.yaml", "TestApp")
 	if err != nil {
 		t.Fatalf("error creating generator: %s\n", err)
 	}
 
-	routesFileBuf, err := g.GenerateRoutesFile()
+	model, err := g.GenerateRoutesFileTemplateModel()
 	if err != nil {
-		t.Fatalf("error generating routes file: %s\n", err)
+		t.Fatalf("error generating routes template model: %s\n", err)
 	}
 
-	expectedFileBuf, err := readFixture("out/config/routes.rb")
-	if err != nil {
-		t.Fatalf("error reading fixture out/config/routes.rb: %s\n", err)
+	expected := RoutesFileTemplateModel{
+		AppName: "TestApp",
+		Routes: []RouteTemplateModel{
+			{
+				Method:        "GET",
+				ModuleName:    "books",
+				OperationName: "GetBooks",
+				Path:          "/books",
+			},
+			{
+				Method:        "GET",
+				ModuleName:    "books",
+				OperationName: "GetBookById",
+				Path:          "/books/:bookId",
+			},
+		},
 	}
 
-	assert.Equal(t, expectedFileBuf, routesFileBuf.String())
+	assert.EqualValues(t, expected, model)
 }
 
 func TestGenerator_GenerateActionDefinitions(t *testing.T) {

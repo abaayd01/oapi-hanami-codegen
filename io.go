@@ -1,22 +1,67 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
+	"embed"
 	"errors"
 	"fmt"
+	"github.com/deepmap/oapi-codegen/pkg/codegen"
 	"os"
 	"strings"
+	"text/template"
 )
+
+//go:embed templates/* templates/fragments/*
+var templatesFS embed.FS
+var templatesFilePath = "templates"
+var routesTemplateFileName = "routes.rb.tmpl"
+var actionTemplateFileName = "action.rb.tmpl"
+var serviceTemplateFileName = "service.rb.tmpl"
+var contractsTemplateFileName = "contracts.rb.tmpl"
+var schemasTemplateFileName = "schemas.rb.tmpl"
 
 type Writer struct {
 	OutputDir string
+	Templates *template.Template
 }
 
-func NewWriter(outputDir string) Writer {
+func NewWriter(outputDir string) (*Writer, error) {
 	trimmedOutputDir := strings.Trim(outputDir, "/")
-	return Writer{
-		OutputDir: trimmedOutputDir,
+	templates, err := LoadTemplates()
+	if err != nil {
+		return nil, err
 	}
+
+	return &Writer{
+		OutputDir: trimmedOutputDir,
+		Templates: templates,
+	}, nil
+}
+
+var TemplateFunctions = merge(codegen.TemplateFunctions, template.FuncMap{
+	"toSnake": toSnake,
+})
+
+func LoadTemplates() (*template.Template, error) {
+	return template.New("templates").Funcs(TemplateFunctions).ParseFS(
+		templatesFS,
+		templatesFilePath+"/*.tmpl",
+		templatesFilePath+"/fragments/*.tmpl",
+	)
+}
+
+func (w Writer) WriteRoutesFileFromModel(model RoutesFileTemplateModel) error {
+	buf, err := w.ExecuteRoutesFileTemplate(model)
+	if err != nil {
+		return fmt.Errorf("error executing routes file template: %w", err)
+	}
+
+	return w.WriteRoutesFile(buf)
+}
+
+func (w Writer) ExecuteRoutesFileTemplate(model RoutesFileTemplateModel) (*bytes.Buffer, error) {
+	return executeTemplate(w.Templates, routesTemplateFileName, model)
 }
 
 func (w Writer) WriteRoutesFile(data *bytes.Buffer) error {
@@ -129,4 +174,17 @@ func doesFileExist(filePath string) bool {
 	}
 
 	return true
+}
+
+func executeTemplate(tmpl *template.Template, filePath string, model any) (*bytes.Buffer, error) {
+	var buf bytes.Buffer
+	w := bufio.NewWriter(&buf)
+	if err := tmpl.ExecuteTemplate(w, filePath, model); err != nil {
+		return nil, fmt.Errorf("error executing %s template: %w", filePath, err)
+	}
+	if err := w.Flush(); err != nil {
+		return nil, fmt.Errorf("error flushing output buffer: %w", err)
+	}
+
+	return &buf, nil
 }

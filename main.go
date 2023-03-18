@@ -32,9 +32,9 @@ func mainRun() exitCode {
 		return exitError
 	}
 
-	routesFileBuf, err := g.GenerateRoutesFile()
+	routesFileTemplateModel, err := g.GenerateRoutesFileTemplateModel()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to generate routes file: %s\n", err)
+		fmt.Fprintf(os.Stderr, "failed to generate routes file template model: %s\n", err)
 		return exitError
 	}
 
@@ -62,9 +62,12 @@ func mainRun() exitCode {
 		return exitError
 	}
 
-	w := NewWriter(config.outputDir)
+	w, err := NewWriter(config.outputDir)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "failed to create a new writer: %s\n", err)
+	}
 
-	err = w.WriteRoutesFile(routesFileBuf)
+	err = w.WriteRoutesFileFromModel(routesFileTemplateModel)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to write routes file: %s\n", err)
 		return exitError
