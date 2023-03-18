@@ -2,7 +2,6 @@ package main
 
 import (
 	"github.com/stretchr/testify/assert"
-	"os"
 	"testing"
 )
 
@@ -43,15 +42,6 @@ func Test_toRackPath(t *testing.T) {
 			assert.Equal(t, tt.want, result)
 		})
 	}
-}
-
-func readFixture(filePath string) (string, error) {
-	b, err := os.ReadFile("fixtures/" + filePath)
-	if err != nil {
-		return "", err
-	}
-
-	return string(b), nil
 }
 
 func TestNewGenerator_MissingTags(t *testing.T) {
