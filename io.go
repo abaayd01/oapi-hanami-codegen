@@ -49,7 +49,7 @@ func (w Writer) WriteActionDefinitions(actions []ActionDefinition) error {
 	return nil
 }
 
-func (w Writer) WriteServiceFiles(services []ServiceDefinition) error {
+func (w Writer) WriteServiceDefinitions(services []ServiceDefinition) error {
 	err := w.createActionsDirIfNotExists()
 	if err != nil {
 		return err

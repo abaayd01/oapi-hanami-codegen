@@ -44,9 +44,9 @@ func mainRun() exitCode {
 		return exitError
 	}
 
-	serviceFileBufs, err := g.GenerateServiceFiles()
+	serviceDefinitions, err := g.GenerateServiceDefinitions()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to generate service files: %s\n", err)
+		fmt.Fprintf(os.Stderr, "failed to generate service definitions: %s\n", err)
 		return exitError
 	}
 
@@ -76,7 +76,7 @@ func mainRun() exitCode {
 		return exitError
 	}
 
-	err = w.WriteServiceFiles(serviceFileBufs)
+	err = w.WriteServiceDefinitions(serviceDefinitions)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to write service files: %s\n", err)
 		return exitError

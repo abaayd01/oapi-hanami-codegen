@@ -197,7 +197,7 @@ func NewServiceDefinition(serviceTemplateModel ServiceTemplateModel, generatedCo
 	}
 }
 
-func (g Generator) GenerateServiceFiles() ([]ServiceDefinition, error) {
+func (g Generator) GenerateServiceDefinitions() ([]ServiceDefinition, error) {
 	var serviceDefinitions []ServiceDefinition
 	for _, operationDefinition := range g.OperationDefinitions {
 		serviceTemplateModel := NewServiceTemplateModel(g.AppName, operationDefinition)
