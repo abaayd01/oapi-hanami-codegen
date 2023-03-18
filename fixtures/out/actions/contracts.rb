@@ -24,20 +24,20 @@ module TestApp
       
       class GetBookByIdResponseContract < Dry::Validation::Contract
         params do
-  required(:author).value(:string)
   optional(:avatar).value(:hash) do
-  optional(:id).value(:integer)
   optional(:profile_image_url).value(:string)
+  optional(:id).value(:integer)
   end
   required(:reviews).array(:hash) do
   optional(:rating).value(:integer)
   required(:text).value(:string)
   required(:user).value(:hash) do
-  optional(:id).value(:string)
   optional(:name).value(:string)
+  optional(:id).value(:string)
   end
   end
   required(:title).value(:string)
+  required(:author).value(:string)
         end
       end
       

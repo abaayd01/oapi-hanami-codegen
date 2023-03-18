@@ -1,6 +1,6 @@
 require "dry/monads"
 
-module PetstoreApp
+module TestApp
   module Actions
     module Books
       class GetBookByIdService
