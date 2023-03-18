@@ -68,6 +68,96 @@ func LoadSwagger(filePath string) (*openapi3.T, error) {
 	return swagger, nil
 }
 
+type OperationDefinition struct {
+	*codegen.OperationDefinition
+	ModuleName            string
+	RequestBodySchema     *openapi3.SchemaRef
+	ResponseBody200Schema *openapi3.SchemaRef
+}
+
+var ErrMissingTags = errors.New("operation definition must specify at least one tag")
+var ErrSpecCannotBeNil = errors.New("operation definition Spec attribute cannot be nil")
+var ErrMalformedSpec = errors.New("operation definition Spec attribute is malformed")
+var ErrMalformedSpecNoRequestBodyJsonMediaType = errors.New("operation definition Spec RequestBody must define an application/json media type")
+var Err200ResponseBodyMissing = errors.New("operation definition must define a 200 response body")
+var Err200ResponseBodyNoJsonMediaType = errors.New("operation definition 200 response body is missing application/json response")
+
+var MediaTypeJson = "application/json"
+
+func safelyDigRequestBodySchema(codegenOperationDefinition codegen.OperationDefinition) (*openapi3.SchemaRef, error) {
+	var requestBodySchema *openapi3.SchemaRef
+	if codegenOperationDefinition.Spec.RequestBody != nil {
+		if codegenOperationDefinition.Spec.RequestBody.Value == nil {
+			return nil, ErrMalformedSpec
+		}
+
+		if codegenOperationDefinition.Spec.RequestBody.Value.GetMediaType(MediaTypeJson) == nil {
+			return nil, ErrMalformedSpecNoRequestBodyJsonMediaType
+		}
+
+		if codegenOperationDefinition.Spec.RequestBody.Value.GetMediaType(MediaTypeJson).Schema == nil {
+			return nil, ErrMalformedSpec
+		}
+
+		requestBodySchema = codegenOperationDefinition.Spec.RequestBody.Value.GetMediaType(MediaTypeJson).Schema
+	}
+
+	return requestBodySchema, nil
+}
+
+func safelyDigResponseBody200Schema(codegenOperationDefinition codegen.OperationDefinition) (*openapi3.SchemaRef, error) {
+	if codegenOperationDefinition.Spec.Responses.Get(200) == nil {
+		return nil, Err200ResponseBodyMissing
+	}
+
+	if codegenOperationDefinition.Spec.Responses.Get(200).Value == nil {
+		return nil, ErrMalformedSpec
+	}
+
+	if codegenOperationDefinition.Spec.Responses.Get(200).Value.Content.Get(MediaTypeJson) == nil {
+		return nil, Err200ResponseBodyNoJsonMediaType
+	}
+
+	return codegenOperationDefinition.Spec.Responses.Get(200).Value.Content.Get(MediaTypeJson).Schema, nil
+}
+
+func safelyDigModuleName(codegenOperationDefinition codegen.OperationDefinition) (string, error) {
+	tags := codegenOperationDefinition.Spec.Tags
+
+	if len(tags) == 0 {
+		return "", ErrMissingTags
+	}
+	return tags[0], nil
+}
+
+func NewOperationDefinition(codegenOperationDefinition codegen.OperationDefinition) (*OperationDefinition, error) {
+	if codegenOperationDefinition.Spec == nil {
+		return nil, ErrSpecCannotBeNil
+	}
+
+	moduleName, err := safelyDigModuleName(codegenOperationDefinition)
+	if err != nil {
+		return nil, fmt.Errorf("error digging out module name from tags: %w", err)
+	}
+
+	requestBodySchema, err := safelyDigRequestBodySchema(codegenOperationDefinition)
+	if err != nil {
+		return nil, fmt.Errorf("error digging out request body schema: %w", err)
+	}
+
+	responseBody200Schema, err := safelyDigResponseBody200Schema(codegenOperationDefinition)
+	if err != nil {
+		return nil, fmt.Errorf("error digging out response body 200 schema: %w", err)
+	}
+
+	return &OperationDefinition{
+		OperationDefinition:   &codegenOperationDefinition,
+		ModuleName:            moduleName,
+		RequestBodySchema:     requestBodySchema,
+		ResponseBody200Schema: responseBody200Schema,
+	}, nil
+}
+
 type RoutesFileTemplateModel struct {
 	AppName string
 	Routes  []RouteTemplateModel
@@ -294,94 +384,4 @@ func isInArray(arr []string, val string) bool {
 	}
 
 	return false
-}
-
-type OperationDefinition struct {
-	*codegen.OperationDefinition
-	ModuleName            string
-	RequestBodySchema     *openapi3.SchemaRef
-	ResponseBody200Schema *openapi3.SchemaRef
-}
-
-var ErrMissingTags = errors.New("operation definition must specify at least one tag")
-var ErrSpecCannotBeNil = errors.New("operation definition Spec attribute cannot be nil")
-var ErrMalformedSpec = errors.New("operation definition Spec attribute is malformed")
-var ErrMalformedSpecNoRequestBodyJsonMediaType = errors.New("operation definition Spec RequestBody must define an application/json media type")
-var Err200ResponseBodyMissing = errors.New("operation definition must define a 200 response body")
-var Err200ResponseBodyNoJsonMediaType = errors.New("operation definition 200 response body is missing application/json response")
-
-var MediaTypeJson = "application/json"
-
-func safelyDigRequestBodySchema(codegenOperationDefinition codegen.OperationDefinition) (*openapi3.SchemaRef, error) {
-	var requestBodySchema *openapi3.SchemaRef
-	if codegenOperationDefinition.Spec.RequestBody != nil {
-		if codegenOperationDefinition.Spec.RequestBody.Value == nil {
-			return nil, ErrMalformedSpec
-		}
-
-		if codegenOperationDefinition.Spec.RequestBody.Value.GetMediaType(MediaTypeJson) == nil {
-			return nil, ErrMalformedSpecNoRequestBodyJsonMediaType
-		}
-
-		if codegenOperationDefinition.Spec.RequestBody.Value.GetMediaType(MediaTypeJson).Schema == nil {
-			return nil, ErrMalformedSpec
-		}
-
-		requestBodySchema = codegenOperationDefinition.Spec.RequestBody.Value.GetMediaType(MediaTypeJson).Schema
-	}
-
-	return requestBodySchema, nil
-}
-
-func safelyDigResponseBody200Schema(codegenOperationDefinition codegen.OperationDefinition) (*openapi3.SchemaRef, error) {
-	if codegenOperationDefinition.Spec.Responses.Get(200) == nil {
-		return nil, Err200ResponseBodyMissing
-	}
-
-	if codegenOperationDefinition.Spec.Responses.Get(200).Value == nil {
-		return nil, ErrMalformedSpec
-	}
-
-	if codegenOperationDefinition.Spec.Responses.Get(200).Value.Content.Get(MediaTypeJson) == nil {
-		return nil, Err200ResponseBodyNoJsonMediaType
-	}
-
-	return codegenOperationDefinition.Spec.Responses.Get(200).Value.Content.Get(MediaTypeJson).Schema, nil
-}
-
-func safelyDigModuleName(codegenOperationDefinition codegen.OperationDefinition) (string, error) {
-	tags := codegenOperationDefinition.Spec.Tags
-
-	if len(tags) == 0 {
-		return "", ErrMissingTags
-	}
-	return tags[0], nil
-}
-
-func NewOperationDefinition(codegenOperationDefinition codegen.OperationDefinition) (*OperationDefinition, error) {
-	if codegenOperationDefinition.Spec == nil {
-		return nil, ErrSpecCannotBeNil
-	}
-
-	moduleName, err := safelyDigModuleName(codegenOperationDefinition)
-	if err != nil {
-		return nil, fmt.Errorf("error digging out module name from tags: %w", err)
-	}
-
-	requestBodySchema, err := safelyDigRequestBodySchema(codegenOperationDefinition)
-	if err != nil {
-		return nil, fmt.Errorf("error digging out request body schema: %w", err)
-	}
-
-	responseBody200Schema, err := safelyDigResponseBody200Schema(codegenOperationDefinition)
-	if err != nil {
-		return nil, fmt.Errorf("error digging out response body 200 schema: %w", err)
-	}
-
-	return &OperationDefinition{
-		OperationDefinition:   &codegenOperationDefinition,
-		ModuleName:            moduleName,
-		RequestBodySchema:     requestBodySchema,
-		ResponseBody200Schema: responseBody200Schema,
-	}, nil
 }
