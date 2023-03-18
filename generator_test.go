@@ -89,59 +89,34 @@ func TestGenerator_GenerateRoutesFileTemplateModel(t *testing.T) {
 		},
 	}
 
-	assert.EqualValues(t, expected, model)
+	assert.Equal(t, expected, model)
 }
 
-func TestGenerator_GenerateActionDefinitions(t *testing.T) {
+func TestGenerator_GenerateActionTemplateModels(t *testing.T) {
 	g, err := NewGenerator("fixtures/test_spec.yaml", "TestApp")
 	if err != nil {
 		t.Fatalf("error creating generator: %s\n", err)
 	}
 
-	actionDefinitions, err := g.GenerateActionDefinitions()
+	actionTemplateModels, err := g.GenerateActionTemplateModels()
 	if err != nil {
-		t.Fatalf("error generating action definitions: %s\n", err)
+		t.Fatalf("error generating action template models: %s\n", err)
 	}
 
-	getBookByIdActionFixture, err := readFixture("out/actions/books/get_book_by_id.rb")
-	if err != nil {
-		t.Fatalf("error reading fixture out/actions/books/get_book_by_id.rb: %s\n", err)
-	}
-
-	getBooksActionFixture, err := readFixture("out/actions/books/get_books.rb")
-	if err != nil {
-		t.Fatalf("error reading fixture out/actions/books/get_books.rb: %s\n", err)
-	}
-
-	expectedActionDefinitions := map[string]ActionDefinition{
-		"GetBookById": {
-			ActionTemplateModel: ActionTemplateModel{
-				AppName:    "TestApp",
-				ActionName: "GetBookById",
-				ModuleName: "books",
-			},
-			GeneratedCode: bytes.NewBufferString(getBookByIdActionFixture),
+	expectedActionTemplateModels := []ActionTemplateModel{
+		{
+			AppName:    "TestApp",
+			ActionName: "GetBookById",
+			ModuleName: "books",
 		},
-		"GetBooks": {
-			ActionTemplateModel: ActionTemplateModel{
-				AppName:    "TestApp",
-				ActionName: "GetBooks",
-				ModuleName: "books",
-			},
-			GeneratedCode: bytes.NewBufferString(getBooksActionFixture),
+		{
+			AppName:    "TestApp",
+			ActionName: "GetBooks",
+			ModuleName: "books",
 		},
 	}
 
-	for _, actionDefinition := range actionDefinitions {
-		key := actionDefinition.ActionName
-		expectedActionDefinition, ok := expectedActionDefinitions[key]
-		if !ok {
-			t.Fatalf("expectedActionDefinition with key '%s' not found", key)
-		}
-
-		assert.Equal(t, expectedActionDefinition.GeneratedCode.String(), actionDefinition.GeneratedCode.String())
-		assert.Equal(t, expectedActionDefinition, actionDefinition)
-	}
+	assert.ElementsMatch(t, expectedActionTemplateModels, actionTemplateModels)
 }
 
 func TestGenerator_GenerateServiceDefinitions(t *testing.T) {

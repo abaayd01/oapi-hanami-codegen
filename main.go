@@ -38,9 +38,10 @@ func mainRun() exitCode {
 		return exitError
 	}
 
-	actionDefinitions, err := g.GenerateActionDefinitions()
+	actionTemplateModels, err := g.GenerateActionTemplateModels()
+	//actionDefinitions, err := g.GenerateActionDefinitions()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to generate action definitions: %s\n", err)
+		fmt.Fprintf(os.Stderr, "failed to generate action template models: %s\n", err)
 		return exitError
 	}
 
@@ -73,7 +74,7 @@ func mainRun() exitCode {
 		return exitError
 	}
 
-	err = w.WriteActionDefinitions(actionDefinitions)
+	err = w.WriteActionsFromModels(actionTemplateModels)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to write action files: %s\n", err)
 		return exitError

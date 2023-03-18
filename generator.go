@@ -106,10 +106,6 @@ func (g Generator) GenerateRoutesFileTemplateModel() (RoutesFileTemplateModel, e
 	}, nil
 }
 
-func (g Generator) ExecuteRoutesFileTemplate(model RoutesFileTemplateModel) (*bytes.Buffer, error) {
-	return executeTemplate(g.Templates, routesTemplateFileName, model)
-}
-
 type ActionTemplateModel struct {
 	AppName    string
 	ActionName string
@@ -124,36 +120,13 @@ func NewActionTemplateModel(appName string, operationDefinition OperationDefinit
 	}
 }
 
-type ActionDefinition struct {
-	ActionTemplateModel
-	GeneratedCode *bytes.Buffer
-}
-
-func NewActionDefinition(appName string, operationDefinition OperationDefinition, generatedCode *bytes.Buffer) ActionDefinition {
-	return ActionDefinition{
-		ActionTemplateModel: NewActionTemplateModel(appName, operationDefinition),
-		GeneratedCode:       generatedCode,
-	}
-}
-
-func (g Generator) GenerateActionDefinitions() ([]ActionDefinition, error) {
-	var actionDefinitions []ActionDefinition
+func (g Generator) GenerateActionTemplateModels() ([]ActionTemplateModel, error) {
+	var actionTemplateModels []ActionTemplateModel
 	for _, operationDefinition := range g.OperationDefinitions {
-		actionTemplateModel := NewActionTemplateModel(g.AppName, operationDefinition)
-		// TODO: should probably move where template execution happens closer to where writing happens
-		// generator should more just be responsible for model generation
-		actionFileBuf, err := g.ExecuteActionFileTemplate(actionTemplateModel)
-		if err != nil {
-			return nil, err
-		}
-		actionDefinitions = append(actionDefinitions, NewActionDefinition(g.AppName, operationDefinition, actionFileBuf))
+		actionTemplateModels = append(actionTemplateModels, NewActionTemplateModel(g.AppName, operationDefinition))
 	}
 
-	return actionDefinitions, nil
-}
-
-func (g Generator) ExecuteActionFileTemplate(model ActionTemplateModel) (*bytes.Buffer, error) {
-	return executeTemplate(g.Templates, actionTemplateFileName, model)
+	return actionTemplateModels, nil
 }
 
 type ServiceTemplateModel struct {

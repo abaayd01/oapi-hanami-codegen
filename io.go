@@ -72,25 +72,39 @@ func (w Writer) WriteRoutesFile(data *bytes.Buffer) error {
 	return writeFile(w.OutputDir+"/config/routes.rb", data)
 }
 
-func (w Writer) WriteActionDefinitions(actions []ActionDefinition) error {
-	err := w.createActionsDirIfNotExists()
+func (w Writer) WriteActionsFromModels(actionTemplateModels []ActionTemplateModel) error {
+	for _, model := range actionTemplateModels {
+		actionFileBuf, err := w.ExecuteActionFileTemplate(model)
+		if err != nil {
+			return fmt.Errorf("error executing action file template: %w", err)
+		}
+
+		err = w.WriteActionFile(model, actionFileBuf)
+		if err != nil {
+			return fmt.Errorf("error writing action file: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (w Writer) ExecuteActionFileTemplate(model ActionTemplateModel) (*bytes.Buffer, error) {
+	return executeTemplate(w.Templates, actionTemplateFileName, model)
+}
+
+func (w Writer) WriteActionFile(model ActionTemplateModel, data *bytes.Buffer) error {
+	actionDirectory := fmt.Sprintf("%s/actions/%s/", w.OutputDir, toSnake(model.ModuleName))
+	err := os.MkdirAll(actionDirectory, os.ModePerm)
 	if err != nil {
-		return err
+		return fmt.Errorf("error creating action directory %s: %w", actionDirectory, err)
 	}
 
-	for _, actionDefinition := range actions {
-		actionDirectory := fmt.Sprintf("%s/actions/%s/", w.OutputDir, toSnake(actionDefinition.ModuleName))
-		err = os.MkdirAll(actionDirectory, os.ModePerm)
-		if err != nil {
-			return fmt.Errorf("error creating action directory %s: %w", actionDirectory, err)
-		}
-
-		actionFilePath := fmt.Sprintf("%s%s.rb", actionDirectory, toSnake(actionDefinition.ActionName))
-		err = writeFile(actionFilePath, actionDefinition.GeneratedCode)
-		if err != nil {
-			return fmt.Errorf("error writing action file %s: %w", actionFilePath, err)
-		}
+	actionFilePath := fmt.Sprintf("%s%s.rb", actionDirectory, toSnake(model.ActionName))
+	err = writeFile(actionFilePath, data)
+	if err != nil {
+		return fmt.Errorf("error writing action file %s: %w", actionFilePath, err)
 	}
+
 	return nil
 }
 
