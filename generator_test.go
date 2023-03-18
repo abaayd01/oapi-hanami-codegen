@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/stretchr/testify/assert"
+	"os"
 	"testing"
 )
 
@@ -18,7 +20,7 @@ func Test_toRackPath(t *testing.T) {
 			args: args{
 				codegenPath: "/users/{user_id}",
 			},
-			want: "/users/:user_id",
+			want: "/users/:user_idzx",
 		},
 		{
 			name: "doesn't do anything if there's no path params",
@@ -37,9 +39,36 @@ func Test_toRackPath(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := toRackPath(tt.args.codegenPath); got != tt.want {
-				t.Errorf("toRackPath() = %v, want %v", got, tt.want)
-			}
+			result := toRackPath(tt.args.codegenPath)
+			assert.Equal(t, tt.want, result)
 		})
 	}
+}
+
+func readFixture(filePath string) (string, error) {
+	b, err := os.ReadFile(filePath)
+	if err != nil {
+		return "", err
+	}
+
+	return string(b), nil
+}
+
+func TestGenerator_GenerateRoutesFile(t *testing.T) {
+	g, err := NewGenerator("fixtures/test_spec.yaml", "TestApp")
+	if err != nil {
+		t.Fatalf("error creating generator: %s\n", err)
+	}
+
+	routesFileBuf, err := g.GenerateRoutesFile()
+	if err != nil {
+		t.Fatalf("error generating routes file: %s\n", err)
+	}
+
+	expectedFileBuf, err := readFixture("out/config/routes.rb")
+	if err != nil {
+		t.Fatalf("error reading fixture out/config/routes.rb: %s\n", err)
+	}
+
+	assert.Equal(t, expectedFileBuf, routesFileBuf.String())
 }
