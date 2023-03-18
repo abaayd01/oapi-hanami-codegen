@@ -451,7 +451,7 @@ func safelyDigRequestBodySchema(codegenOperationDefinition codegen.OperationDefi
 	return requestBodySchema, nil
 }
 
-func safelyDigResponse200BodySchema(codegenOperationDefinition codegen.OperationDefinition) (*openapi3.SchemaRef, error) {
+func safelyDigResponseBody200Schema(codegenOperationDefinition codegen.OperationDefinition) (*openapi3.SchemaRef, error) {
 	if codegenOperationDefinition.Spec.Responses.Get(200) == nil {
 		return nil, Err200ResponseBodyMissing
 	}
@@ -491,7 +491,7 @@ func NewOperationDefinition(codegenOperationDefinition codegen.OperationDefiniti
 		return nil, fmt.Errorf("error digging out request body schema: %w", err)
 	}
 
-	responseBody200Schema, err := safelyDigResponse200BodySchema(codegenOperationDefinition)
+	responseBody200Schema, err := safelyDigResponseBody200Schema(codegenOperationDefinition)
 	if err != nil {
 		return nil, fmt.Errorf("error digging out response body 200 schema: %w", err)
 	}
