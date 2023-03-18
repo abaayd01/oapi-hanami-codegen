@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
@@ -119,56 +118,31 @@ func TestGenerator_GenerateActionTemplateModels(t *testing.T) {
 	assert.ElementsMatch(t, expectedActionTemplateModels, actionTemplateModels)
 }
 
-func TestGenerator_GenerateServiceDefinitions(t *testing.T) {
+func TestGenerator_GenerateServiceTemplateModels(t *testing.T) {
 	g, err := NewGenerator("fixtures/test_spec.yaml", "TestApp")
 	if err != nil {
 		t.Fatalf("error creating generator: %s\n", err)
 	}
 
-	serviceDefinitions, err := g.GenerateServiceDefinitions()
+	serviceTemplateModels, err := g.GenerateServiceTemplateModels()
 	if err != nil {
-		t.Fatalf("error generating service definitions: %s\n", err)
+		t.Fatalf("error generating service tempalte models: %s\n", err)
 	}
 
-	getBookByIdServiceFixture, err := readFixture("out/actions/books/get_book_by_id_service.rb")
-	if err != nil {
-		t.Fatalf("error reading fixture out/actions/books/get_book_by_id_service.rb: %s\n", err)
-	}
-
-	getBooksServiceFixture, err := readFixture("out/actions/books/get_books_service.rb")
-	if err != nil {
-		t.Fatalf("error reading fixture out/actions/books/get_books_service.rb: %s\n", err)
-	}
-
-	expectedServiceDefinitions := map[string]ServiceDefinition{
-		"GetBookByIdService": {
-			ServiceTemplateModel: ServiceTemplateModel{
-				AppName:     "TestApp",
-				ServiceName: "GetBookByIdService",
-				ModuleName:  "books",
-			},
-			GeneratedCode: bytes.NewBufferString(getBookByIdServiceFixture),
+	expectedServiceTemplateModels := []ServiceTemplateModel{
+		{
+			AppName:     "TestApp",
+			ServiceName: "GetBookByIdService",
+			ModuleName:  "books",
 		},
-		"GetBooksService": {
-			ServiceTemplateModel: ServiceTemplateModel{
-				AppName:     "TestApp",
-				ServiceName: "GetBooksService",
-				ModuleName:  "books",
-			},
-			GeneratedCode: bytes.NewBufferString(getBooksServiceFixture),
+		{
+			AppName:     "TestApp",
+			ServiceName: "GetBooksService",
+			ModuleName:  "books",
 		},
 	}
 
-	for _, serviceDefinition := range serviceDefinitions {
-		key := serviceDefinition.ServiceName
-		expectedServiceDefinition, ok := expectedServiceDefinitions[key]
-		if !ok {
-			t.Fatalf("expectedServiceDefinition with key '%s' not found", key)
-		}
-
-		assert.Equal(t, expectedServiceDefinition.GeneratedCode.String(), serviceDefinition.GeneratedCode.String())
-		assert.Equal(t, expectedServiceDefinition, serviceDefinition)
-	}
+	assert.ElementsMatch(t, expectedServiceTemplateModels, serviceTemplateModels)
 }
 
 // TODO: this test seems to be flaky since ordering of attributes in generated file isn't stable

@@ -72,7 +72,7 @@ func (w Writer) WriteRoutesFile(data *bytes.Buffer) error {
 	return writeFile(w.OutputDir+"/config/routes.rb", data)
 }
 
-func (w Writer) WriteActionsFromModels(actionTemplateModels []ActionTemplateModel) error {
+func (w Writer) WriteActionFilesFromModels(actionTemplateModels []ActionTemplateModel) error {
 	for _, model := range actionTemplateModels {
 		actionFileBuf, err := w.ExecuteActionFileTemplate(model)
 		if err != nil {
@@ -108,32 +108,46 @@ func (w Writer) WriteActionFile(model ActionTemplateModel, data *bytes.Buffer) e
 	return nil
 }
 
-func (w Writer) WriteServiceDefinitions(services []ServiceDefinition) error {
-	err := w.createActionsDirIfNotExists()
+func (w Writer) WriteServiceFilesFromModels(models []ServiceTemplateModel) error {
+	for _, model := range models {
+		buf, err := w.ExecuteServiceFileTemplate(model)
+		if err != nil {
+			return fmt.Errorf("error executing service file template: %w", err)
+		}
+
+		err = w.WriteServiceFile(model, buf)
+		if err != nil {
+			return fmt.Errorf("error writing service file: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (w Writer) ExecuteServiceFileTemplate(model ServiceTemplateModel) (*bytes.Buffer, error) {
+	return executeTemplate(w.Templates, serviceTemplateFileName, model)
+}
+
+func (w Writer) WriteServiceFile(model ServiceTemplateModel, data *bytes.Buffer) error {
+	parentDir := fmt.Sprintf("%s/actions/%s/", w.OutputDir, toSnake(model.ModuleName))
+	err := os.MkdirAll(parentDir, os.ModePerm)
 	if err != nil {
-		return err
+		return fmt.Errorf("error creating parent directory %s: %w", parentDir, err)
 	}
 
-	for _, serviceDefinition := range services {
-		parentDir := fmt.Sprintf("%s/actions/%s/", w.OutputDir, toSnake(serviceDefinition.ModuleName))
-		err = os.MkdirAll(parentDir, os.ModePerm)
-		if err != nil {
-			return fmt.Errorf("error creating parent directory %s: %w", parentDir, err)
-		}
+	serviceFilePath := fmt.Sprintf("%s%s.rb", parentDir, toSnake(model.ServiceName))
 
-		serviceFilePath := fmt.Sprintf("%s%s.rb", parentDir, toSnake(serviceDefinition.ServiceName))
-
-		fileExists := doesFileExist(serviceFilePath)
-		if fileExists {
-			// don't write the thing, we don't want to overwrite service files if they already exist
-			continue
-		}
-
-		err = writeFile(serviceFilePath, serviceDefinition.GeneratedCode)
-		if err != nil {
-			return fmt.Errorf("error writing service file %s: %w", serviceFilePath, err)
-		}
+	fileExists := doesFileExist(serviceFilePath)
+	if fileExists {
+		// don't write the thing, we don't want to overwrite service files if they already exist
+		return nil
 	}
+
+	err = writeFile(serviceFilePath, data)
+	if err != nil {
+		return fmt.Errorf("error writing service file %s: %w", serviceFilePath, err)
+	}
+
 	return nil
 }
 

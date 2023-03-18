@@ -39,15 +39,14 @@ func mainRun() exitCode {
 	}
 
 	actionTemplateModels, err := g.GenerateActionTemplateModels()
-	//actionDefinitions, err := g.GenerateActionDefinitions()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to generate action template models: %s\n", err)
 		return exitError
 	}
 
-	serviceDefinitions, err := g.GenerateServiceDefinitions()
+	serviceTemplateModels, err := g.GenerateServiceTemplateModels()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to generate service definitions: %s\n", err)
+		fmt.Fprintf(os.Stderr, "failed to generate service template models: %s\n", err)
 		return exitError
 	}
 
@@ -74,13 +73,13 @@ func mainRun() exitCode {
 		return exitError
 	}
 
-	err = w.WriteActionsFromModels(actionTemplateModels)
+	err = w.WriteActionFilesFromModels(actionTemplateModels)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to write action files: %s\n", err)
 		return exitError
 	}
 
-	err = w.WriteServiceDefinitions(serviceDefinitions)
+	err = w.WriteServiceFilesFromModels(serviceTemplateModels)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to write service files: %s\n", err)
 		return exitError

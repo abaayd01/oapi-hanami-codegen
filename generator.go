@@ -135,11 +135,6 @@ type ServiceTemplateModel struct {
 	ModuleName  string
 }
 
-type ServiceDefinition struct {
-	ServiceTemplateModel
-	GeneratedCode *bytes.Buffer
-}
-
 func NewServiceTemplateModel(appName string, operationDefinition OperationDefinition) ServiceTemplateModel {
 	return ServiceTemplateModel{
 		AppName:     appName,
@@ -148,29 +143,13 @@ func NewServiceTemplateModel(appName string, operationDefinition OperationDefini
 	}
 }
 
-func NewServiceDefinition(serviceTemplateModel ServiceTemplateModel, generatedCode *bytes.Buffer) ServiceDefinition {
-	return ServiceDefinition{
-		ServiceTemplateModel: serviceTemplateModel,
-		GeneratedCode:        generatedCode,
-	}
-}
-
-func (g Generator) GenerateServiceDefinitions() ([]ServiceDefinition, error) {
-	var serviceDefinitions []ServiceDefinition
+func (g Generator) GenerateServiceTemplateModels() ([]ServiceTemplateModel, error) {
+	var serviceTemplateModels []ServiceTemplateModel
 	for _, operationDefinition := range g.OperationDefinitions {
-		serviceTemplateModel := NewServiceTemplateModel(g.AppName, operationDefinition)
-		serviceFileBuf, err := g.ExecuteServiceFileTemplate(serviceTemplateModel)
-		if err != nil {
-			return nil, err
-		}
-		serviceDefinitions = append(serviceDefinitions, NewServiceDefinition(serviceTemplateModel, serviceFileBuf))
+		serviceTemplateModels = append(serviceTemplateModels, NewServiceTemplateModel(g.AppName, operationDefinition))
 	}
 
-	return serviceDefinitions, nil
-}
-
-func (g Generator) ExecuteServiceFileTemplate(model ServiceTemplateModel) (*bytes.Buffer, error) {
-	return executeTemplate(g.Templates, serviceTemplateFileName, model)
+	return serviceTemplateModels, nil
 }
 
 func (g Generator) GenerateContractsFile() (*bytes.Buffer, error) {
