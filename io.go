@@ -27,7 +27,7 @@ func (w Writer) WriteRoutesFile(data *bytes.Buffer) error {
 	return writeFile(w.OutputDir+"/config/routes.rb", data)
 }
 
-func (w Writer) WriteActionFiles(actions []ActionDefinition) error {
+func (w Writer) WriteActionDefinitions(actions []ActionDefinition) error {
 	err := w.createActionsDirIfNotExists()
 	if err != nil {
 		return err

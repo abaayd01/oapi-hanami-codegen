@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
@@ -71,4 +72,47 @@ func TestGenerator_GenerateRoutesFile(t *testing.T) {
 	}
 
 	assert.Equal(t, expectedFileBuf, routesFileBuf.String())
+}
+
+func TestGenerator_GenerateActionFiles(t *testing.T) {
+	g, err := NewGenerator("fixtures/test_spec.yaml", "TestApp")
+	if err != nil {
+		t.Fatalf("error creating generator: %s\n", err)
+	}
+
+	actionDefinitions, err := g.GenerateActionDefinitions()
+	if err != nil {
+		t.Fatalf("error generating action definitions: %s\n", err)
+	}
+
+	getBookByIdActionFixture, err := readFixture("out/actions/books/get_book_by_id.rb")
+	if err != nil {
+		t.Fatalf("error reading fixture out/actions/books/get_book_by_id.rb: %s\n", err)
+	}
+
+	getBooksActionFixture, err := readFixture("out/actions/books/get_books.rb")
+	if err != nil {
+		t.Fatalf("error reading fixture out/actions/books/get_books.rb: %s\n", err)
+	}
+
+	expectedActionDefinitions := []ActionDefinition{
+		{
+			ActionTemplateModel: ActionTemplateModel{
+				AppName:    "TestApp",
+				ActionName: "GetBookById",
+				ModuleName: "books",
+			},
+			GeneratedCode: bytes.NewBufferString(getBookByIdActionFixture),
+		},
+		{
+			ActionTemplateModel: ActionTemplateModel{
+				AppName:    "TestApp",
+				ActionName: "GetBooks",
+				ModuleName: "books",
+			},
+			GeneratedCode: bytes.NewBufferString(getBooksActionFixture),
+		},
+	}
+
+	assert.ElementsMatch(t, expectedActionDefinitions, actionDefinitions)
 }

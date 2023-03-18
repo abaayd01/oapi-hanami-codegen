@@ -38,9 +38,9 @@ func mainRun() exitCode {
 		return exitError
 	}
 
-	actionFileBufs, err := g.GenerateActionFiles()
+	actionDefinitions, err := g.GenerateActionDefinitions()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to generate action files: %s\n", err)
+		fmt.Fprintf(os.Stderr, "failed to generate action definitions: %s\n", err)
 		return exitError
 	}
 
@@ -70,7 +70,7 @@ func mainRun() exitCode {
 		return exitError
 	}
 
-	err = w.WriteActionFiles(actionFileBufs)
+	err = w.WriteActionDefinitions(actionDefinitions)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to write action files: %s\n", err)
 		return exitError

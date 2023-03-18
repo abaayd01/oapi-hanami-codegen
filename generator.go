@@ -153,7 +153,7 @@ func NewActionDefinition(appName string, operationDefinition codegen.OperationDe
 	}
 }
 
-func (g Generator) GenerateActionFiles() ([]ActionDefinition, error) {
+func (g Generator) GenerateActionDefinitions() ([]ActionDefinition, error) {
 	var actionDefinitions []ActionDefinition
 	for _, operationDefinition := range g.OperationDefinitions {
 		actionTemplateModel := NewActionTemplateModel(g.AppName, operationDefinition)
