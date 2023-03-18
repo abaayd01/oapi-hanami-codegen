@@ -21,7 +21,7 @@ func Test_toRackPath(t *testing.T) {
 			args: args{
 				codegenPath: "/users/{user_id}",
 			},
-			want: "/users/:user_idzx",
+			want: "/users/:user_id",
 		},
 		{
 			name: "doesn't do anything if there's no path params",
@@ -47,7 +47,7 @@ func Test_toRackPath(t *testing.T) {
 }
 
 func readFixture(filePath string) (string, error) {
-	b, err := os.ReadFile(filePath)
+	b, err := os.ReadFile("fixtures/" + filePath)
 	if err != nil {
 		return "", err
 	}
@@ -95,8 +95,8 @@ func TestGenerator_GenerateActionDefinitions(t *testing.T) {
 		t.Fatalf("error reading fixture out/actions/books/get_books.rb: %s\n", err)
 	}
 
-	expectedActionDefinitions := []ActionDefinition{
-		{
+	expectedActionDefinitions := map[string]ActionDefinition{
+		"GetBookById": {
 			ActionTemplateModel: ActionTemplateModel{
 				AppName:    "TestApp",
 				ActionName: "GetBookById",
@@ -104,7 +104,7 @@ func TestGenerator_GenerateActionDefinitions(t *testing.T) {
 			},
 			GeneratedCode: bytes.NewBufferString(getBookByIdActionFixture),
 		},
-		{
+		"GetBooks": {
 			ActionTemplateModel: ActionTemplateModel{
 				AppName:    "TestApp",
 				ActionName: "GetBooks",
@@ -114,7 +114,16 @@ func TestGenerator_GenerateActionDefinitions(t *testing.T) {
 		},
 	}
 
-	assert.ElementsMatch(t, expectedActionDefinitions, actionDefinitions)
+	for _, actionDefinition := range actionDefinitions {
+		key := actionDefinition.ActionName
+		expectedActionDefinition, ok := expectedActionDefinitions[key]
+		if !ok {
+			t.Fatalf("expectedActionDefinition with key '%s' not found", key)
+		}
+
+		assert.Equal(t, expectedActionDefinition.GeneratedCode.String(), actionDefinition.GeneratedCode.String())
+		assert.Equal(t, expectedActionDefinition, actionDefinition)
+	}
 }
 
 func TestGenerator_GenerateServiceDefinitions(t *testing.T) {
@@ -123,7 +132,7 @@ func TestGenerator_GenerateServiceDefinitions(t *testing.T) {
 		t.Fatalf("error creating generator: %s\n", err)
 	}
 
-	actionDefinitions, err := g.GenerateServiceDefinitions()
+	serviceDefinitions, err := g.GenerateServiceDefinitions()
 	if err != nil {
 		t.Fatalf("error generating service definitions: %s\n", err)
 	}
@@ -138,8 +147,8 @@ func TestGenerator_GenerateServiceDefinitions(t *testing.T) {
 		t.Fatalf("error reading fixture out/actions/books/get_books_service.rb: %s\n", err)
 	}
 
-	expectedServiceDefinitions := []ServiceDefinition{
-		{
+	expectedServiceDefinitions := map[string]ServiceDefinition{
+		"GetBookByIdService": {
 			ServiceTemplateModel: ServiceTemplateModel{
 				AppName:     "TestApp",
 				ServiceName: "GetBookByIdService",
@@ -147,7 +156,7 @@ func TestGenerator_GenerateServiceDefinitions(t *testing.T) {
 			},
 			GeneratedCode: bytes.NewBufferString(getBookByIdServiceFixture),
 		},
-		{
+		"GetBooksService": {
 			ServiceTemplateModel: ServiceTemplateModel{
 				AppName:     "TestApp",
 				ServiceName: "GetBooksService",
@@ -157,5 +166,14 @@ func TestGenerator_GenerateServiceDefinitions(t *testing.T) {
 		},
 	}
 
-	assert.ElementsMatch(t, expectedServiceDefinitions, actionDefinitions)
+	for _, serviceDefinition := range serviceDefinitions {
+		key := serviceDefinition.ServiceName
+		expectedServiceDefinition, ok := expectedServiceDefinitions[key]
+		if !ok {
+			t.Fatalf("expectedServiceDefinition with key '%s' not found", key)
+		}
+
+		assert.Equal(t, expectedServiceDefinition.GeneratedCode.String(), serviceDefinition.GeneratedCode.String())
+		assert.Equal(t, expectedServiceDefinition, serviceDefinition)
+	}
 }
