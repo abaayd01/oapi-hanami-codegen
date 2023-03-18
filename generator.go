@@ -260,7 +260,7 @@ func (g Generator) GenerateContractsFileTemplateModel() (ContractsFileTemplateMo
 
 		// injecting the request body attributes
 		if operationDefinition.Spec.RequestBody != nil {
-			requestContract.Attributes = GenerateAttributeDefinitions(operationDefinition.Spec.RequestBody.Value.Content["application/json"].Schema)
+			requestContract.Attributes = GenerateAttributeDefinitions(operationDefinition.RequestBodySchema)
 		}
 
 		// injecting the query & path params
@@ -270,7 +270,7 @@ func (g Generator) GenerateContractsFileTemplateModel() (ContractsFileTemplateMo
 
 		responseContract := ContractTemplateModel{
 			ContractName: fmt.Sprintf("%sResponseContract", operationDefinition.OperationId),
-			Attributes:   GenerateAttributeDefinitions(operationDefinition.Spec.Responses["200"].Value.Content["application/json"].Schema),
+			Attributes:   GenerateAttributeDefinitions(operationDefinition.ResponseBody200Schema),
 		}
 
 		contracts = append(contracts, requestContract, responseContract)
