@@ -42,9 +42,11 @@ func NewGenerator(inputFilePath string, appName string) (*Generator, error) {
 
 	var operationDefinitions []OperationDefinition
 	for i, _ := range codegenOperationDefinitions {
-		operationDefinitions = append(operationDefinitions, OperationDefinition{
-			OperationDefinition: &codegenOperationDefinitions[i],
-		})
+		operationDefinition, err := NewOperationDefinition(codegenOperationDefinitions[i])
+		if err != nil {
+			return nil, err
+		}
+		operationDefinitions = append(operationDefinitions, *operationDefinition)
 	}
 
 	templates, err := LoadTemplates()
@@ -115,7 +117,7 @@ func NewRoutesFileTemplateModel(appName string, operationDefinitions []Operation
 	for _, operationDefinition := range operationDefinitions {
 		routeTemplateModels = append(routeTemplateModels, RouteTemplateModel{
 			Method:        operationDefinition.Method,
-			ModuleName:    operationDefinition.Spec.Tags[0],
+			ModuleName:    operationDefinition.ModuleName,
 			OperationName: operationDefinition.OperationId,
 			Path:          toRackPath(operationDefinition.Path),
 		})
@@ -149,7 +151,7 @@ func NewActionTemplateModel(appName string, operationDefinition OperationDefinit
 	return ActionTemplateModel{
 		AppName:    appName,
 		ActionName: operationDefinition.OperationId,
-		ModuleName: operationDefinition.Spec.Tags[0],
+		ModuleName: operationDefinition.ModuleName,
 	}
 }
 
@@ -169,6 +171,8 @@ func (g Generator) GenerateActionDefinitions() ([]ActionDefinition, error) {
 	var actionDefinitions []ActionDefinition
 	for _, operationDefinition := range g.OperationDefinitions {
 		actionTemplateModel := NewActionTemplateModel(g.AppName, operationDefinition)
+		// TODO: should probably move where template execution happens closer to where writing happens
+		// generator should more just be responsible for model generation
 		actionFileBuf, err := g.ExecuteActionFileTemplate(actionTemplateModel)
 		if err != nil {
 			return nil, err
@@ -198,7 +202,7 @@ func NewServiceTemplateModel(appName string, operationDefinition OperationDefini
 	return ServiceTemplateModel{
 		AppName:     appName,
 		ServiceName: fmt.Sprintf("%sService", operationDefinition.OperationId),
-		ModuleName:  operationDefinition.Spec.Tags[0],
+		ModuleName:  operationDefinition.ModuleName,
 	}
 }
 
@@ -412,13 +416,19 @@ func isInArray(arr []string, val string) bool {
 
 type OperationDefinition struct {
 	*codegen.OperationDefinition
+	ModuleName string
 }
 
-func (oD *OperationDefinition) ModuleName() (string, error) {
-	tags := oD.Spec.Tags
+var ErrMissingTags = errors.New("operation definition must specify at least one tag")
+
+func NewOperationDefinition(codegenOperationDefinition codegen.OperationDefinition) (*OperationDefinition, error) {
+	tags := codegenOperationDefinition.Spec.Tags
 	if len(tags) == 0 {
-		return "", errors.New("error operation definition must specify at least one tag")
+		return nil, ErrMissingTags
 	}
 
-	return tags[0], nil
+	return &OperationDefinition{
+		OperationDefinition: &codegenOperationDefinition,
+		ModuleName:          tags[0],
+	}, nil
 }

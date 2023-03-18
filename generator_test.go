@@ -55,6 +55,11 @@ func readFixture(filePath string) (string, error) {
 	return string(b), nil
 }
 
+func TestNewGenerator_MissingTags(t *testing.T) {
+	_, err := NewGenerator("fixtures/test_spec_missing_tags.yaml", "TestApp")
+	assert.EqualError(t, err, ErrMissingTags.Error())
+}
+
 func TestGenerator_GenerateRoutesFile(t *testing.T) {
 	g, err := NewGenerator("fixtures/test_spec.yaml", "TestApp")
 	if err != nil {
@@ -178,6 +183,8 @@ func TestGenerator_GenerateServiceDefinitions(t *testing.T) {
 	}
 }
 
+// TODO: this test seems to be flaky since ordering of attributes in generated file isn't stable
+// maybe test the underlying functions separately instead?
 func TestGenerator_GenerateContractsFile(t *testing.T) {
 	g, err := NewGenerator("fixtures/test_spec.yaml", "TestApp")
 	if err != nil {

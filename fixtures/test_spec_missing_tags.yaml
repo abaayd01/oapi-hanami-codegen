@@ -1,0 +1,85 @@
+openapi: 3.0.3
+info:
+  title: A Test OpenAPI spec, which is missing tags
+  description: A Test OpenAPI Spec
+  version: "1"
+tags:
+  - name: books
+    description: Routes for books
+paths:
+  /books:
+    get:
+      summary: Get a list of books
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  books:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        title:
+                          type: string
+                        author:
+                          type: string
+      operationId: get-books
+    parameters: [ ]
+  '/books/{bookId}':
+    get:
+      summary: Get a single book by id
+      tags:
+        - books
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  title:
+                    type: string
+                  author:
+                    type: string
+                  reviews:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        text:
+                          type: string
+                        user:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            name:
+                              type: string
+                        rating:
+                          type: integer
+                      required:
+                        - text
+                        - user
+                  avatar:
+                    type: object
+                    properties:
+                      profileImageUrl:
+                        type: string
+                      id:
+                        type: integer
+                required:
+                  - title
+                  - author
+                  - reviews
+      operationId: get-book-by-id
+    parameters:
+      - schema:
+          type: string
+        name: bookId
+        in: path
+        required: true
