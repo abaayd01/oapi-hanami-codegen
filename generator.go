@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"embed"
+	"errors"
 	"fmt"
 	"github.com/deepmap/oapi-codegen/pkg/codegen"
 	"github.com/deepmap/oapi-codegen/pkg/util"
@@ -23,7 +24,7 @@ var schemasTemplateFileName = "schemas.rb.tmpl"
 
 type Generator struct {
 	AppName              string
-	OperationDefinitions []codegen.OperationDefinition
+	OperationDefinitions []OperationDefinition
 	Swagger              *openapi3.T
 	Templates            *template.Template
 }
@@ -34,9 +35,16 @@ func NewGenerator(inputFilePath string, appName string) (*Generator, error) {
 		return nil, err
 	}
 
-	operationDefinitions, err := codegen.OperationDefinitions(swagger)
+	codegenOperationDefinitions, err := codegen.OperationDefinitions(swagger)
 	if err != nil {
 		return nil, err
+	}
+
+	var operationDefinitions []OperationDefinition
+	for i, _ := range codegenOperationDefinitions {
+		operationDefinitions = append(operationDefinitions, OperationDefinition{
+			OperationDefinition: &codegenOperationDefinitions[i],
+		})
 	}
 
 	templates, err := LoadTemplates()
@@ -102,14 +110,14 @@ func toRackPath(codegenPath string) string {
 	return out
 }
 
-func NewRoutesFileTemplateModel(appName string, operationDefinitions []codegen.OperationDefinition) (RoutesFileTemplateModel, error) {
+func NewRoutesFileTemplateModel(appName string, operationDefinitions []OperationDefinition) (RoutesFileTemplateModel, error) {
 	var routeTemplateModels []RouteTemplateModel
-	for _, op := range operationDefinitions {
+	for _, operationDefinition := range operationDefinitions {
 		routeTemplateModels = append(routeTemplateModels, RouteTemplateModel{
-			Method:        op.Method,
-			ModuleName:    op.Spec.Tags[0],
-			OperationName: op.OperationId,
-			Path:          toRackPath(op.Path),
+			Method:        operationDefinition.Method,
+			ModuleName:    operationDefinition.Spec.Tags[0],
+			OperationName: operationDefinition.OperationId,
+			Path:          toRackPath(operationDefinition.Path),
 		})
 	}
 
@@ -137,7 +145,7 @@ type ActionTemplateModel struct {
 	ModuleName string
 }
 
-func NewActionTemplateModel(appName string, operationDefinition codegen.OperationDefinition) ActionTemplateModel {
+func NewActionTemplateModel(appName string, operationDefinition OperationDefinition) ActionTemplateModel {
 	return ActionTemplateModel{
 		AppName:    appName,
 		ActionName: operationDefinition.OperationId,
@@ -150,7 +158,7 @@ type ActionDefinition struct {
 	GeneratedCode *bytes.Buffer
 }
 
-func NewActionDefinition(appName string, operationDefinition codegen.OperationDefinition, generatedCode *bytes.Buffer) ActionDefinition {
+func NewActionDefinition(appName string, operationDefinition OperationDefinition, generatedCode *bytes.Buffer) ActionDefinition {
 	return ActionDefinition{
 		ActionTemplateModel: NewActionTemplateModel(appName, operationDefinition),
 		GeneratedCode:       generatedCode,
@@ -186,7 +194,7 @@ type ServiceDefinition struct {
 	GeneratedCode *bytes.Buffer
 }
 
-func NewServiceTemplateModel(appName string, operationDefinition codegen.OperationDefinition) ServiceTemplateModel {
+func NewServiceTemplateModel(appName string, operationDefinition OperationDefinition) ServiceTemplateModel {
 	return ServiceTemplateModel{
 		AppName:     appName,
 		ServiceName: fmt.Sprintf("%sService", operationDefinition.OperationId),
@@ -242,7 +250,7 @@ type ContractsFileTemplateModel struct {
 	Contracts []ContractTemplateModel
 }
 
-func NewContractsFileTemplateModel(appName string, operationDefinitions []codegen.OperationDefinition) (ContractsFileTemplateModel, error) {
+func NewContractsFileTemplateModel(appName string, operationDefinitions []OperationDefinition) (ContractsFileTemplateModel, error) {
 	var contracts []ContractTemplateModel
 	for _, operationDefinition := range operationDefinitions {
 		requestContract := ContractTemplateModel{
@@ -400,4 +408,17 @@ func isInArray(arr []string, val string) bool {
 	}
 
 	return false
+}
+
+type OperationDefinition struct {
+	*codegen.OperationDefinition
+}
+
+func (oD *OperationDefinition) ModuleName() (string, error) {
+	tags := oD.Spec.Tags
+	if len(tags) == 0 {
+		return "", errors.New("error operation definition must specify at least one tag")
+	}
+
+	return tags[0], nil
 }
