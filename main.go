@@ -85,6 +85,10 @@ func mainRun() exitCode {
 		return exitError
 	}
 	err = w.WriteSchemasFile(schemasFile)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "failed to write schemas file: %s\n", err)
+		return exitError
+	}
 
 	return exitOK
 }
