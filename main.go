@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -19,7 +20,11 @@ func main() {
 }
 
 func mainRun() exitCode {
-	config := parseArgs()
+	config, err := parseArgs()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error parsing args: %s\n", err)
+		return exitError
+	}
 
 	g, err := NewGenerator(config.inputFilePath, config.appName)
 	if err != nil {
@@ -90,16 +95,20 @@ type args struct {
 	outputDir     string
 }
 
-func parseArgs() args {
+func parseArgs() (*args, error) {
 	inputFilePtr := flag.String("inputFile", "", "file path of OpenAPI spec")
 	appNamePtr := flag.String("appName", "HanamiApp", "name of the top-level Hanami app module")
 	outputDirPtr := flag.String("outputDir", "gen", "path to output directory")
 
 	flag.Parse()
 
-	return args{
+	if *inputFilePtr == "" {
+		return nil, errors.New("must provide an inputFile")
+	}
+
+	return &args{
 		inputFilePath: *inputFilePtr,
 		appName:       *appNamePtr,
 		outputDir:     *outputDirPtr,
-	}
+	}, nil
 }
