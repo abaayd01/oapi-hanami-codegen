@@ -177,3 +177,22 @@ func TestGenerator_GenerateServiceDefinitions(t *testing.T) {
 		assert.Equal(t, expectedServiceDefinition, serviceDefinition)
 	}
 }
+
+func TestGenerator_GenerateContractsFile(t *testing.T) {
+	g, err := NewGenerator("fixtures/test_spec.yaml", "TestApp")
+	if err != nil {
+		t.Fatalf("error creating generator: %s\n", err)
+	}
+
+	contractsFileBuf, err := g.GenerateContractsFile()
+	if err != nil {
+		t.Fatalf("error generating contracts file: %s\n", err)
+	}
+
+	expectedFileBuf, err := readFixture("out/actions/contracts.rb")
+	if err != nil {
+		t.Fatalf("error reading fixture out/actions/contracts.rb: %s\n", err)
+	}
+
+	assert.Equal(t, expectedFileBuf, contractsFileBuf.String())
+}
