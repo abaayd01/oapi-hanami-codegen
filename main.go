@@ -34,7 +34,7 @@ func mainRun() exitCode {
 
 	templateModels, err := g.GenerateTemplateModels()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to generate template models generator: %s\n", err)
+		fmt.Fprintf(os.Stderr, "failed to generate template models: %s\n", err)
 		return exitError
 	}
 

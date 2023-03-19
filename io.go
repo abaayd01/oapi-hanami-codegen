@@ -28,7 +28,7 @@ type Writer struct {
 
 func NewWriter(outputDir string) (*Writer, error) {
 	trimmedOutputDir := strings.Trim(outputDir, "/")
-	templates, err := LoadTemplates()
+	templates, err := loadTemplates()
 	if err != nil {
 		return nil, err
 	}
@@ -39,12 +39,12 @@ func NewWriter(outputDir string) (*Writer, error) {
 	}, nil
 }
 
-var TemplateFunctions = merge(codegen.TemplateFunctions, template.FuncMap{
+var templateFunctions = merge(codegen.TemplateFunctions, template.FuncMap{
 	"toSnake": toSnake,
 })
 
-func LoadTemplates() (*template.Template, error) {
-	return template.New("templates").Funcs(TemplateFunctions).ParseFS(
+func loadTemplates() (*template.Template, error) {
+	return template.New("templates").Funcs(templateFunctions).ParseFS(
 		templatesFS,
 		templatesFilePath+"/*.tmpl",
 		templatesFilePath+"/fragments/*.tmpl",

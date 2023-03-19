@@ -8,14 +8,12 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 	"regexp"
 	"sort"
-	"text/template"
 )
 
 type Generator struct {
 	AppName              string
 	OperationDefinitions []OperationDefinition
 	Swagger              *openapi3.T
-	Templates            *template.Template
 }
 
 func NewGenerator(inputFilePath string, appName string) (*Generator, error) {
@@ -38,16 +36,10 @@ func NewGenerator(inputFilePath string, appName string) (*Generator, error) {
 		operationDefinitions = append(operationDefinitions, *operationDefinition)
 	}
 
-	templates, err := LoadTemplates()
-	if err != nil {
-		return nil, err
-	}
-
 	return &Generator{
 		AppName:              appName,
 		OperationDefinitions: operationDefinitions,
 		Swagger:              swagger,
-		Templates:            templates,
 	}, nil
 }
 
