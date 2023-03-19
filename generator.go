@@ -68,6 +68,36 @@ type OperationDefinition struct {
 	ResponseBody200Schema *openapi3.SchemaRef
 }
 
+func NewOperationDefinition(codegenOperationDefinition codegen.OperationDefinition) (*OperationDefinition, error) {
+	if codegenOperationDefinition.Spec == nil {
+		return nil, ErrSpecCannotBeNil
+	}
+
+	moduleName, err := safelyDigModuleName(codegenOperationDefinition)
+	if err != nil {
+		return nil, fmt.Errorf("error digging out module name from tags: %w", err)
+	}
+
+	requestBodySchema, err := safelyDigRequestBodySchema(codegenOperationDefinition)
+	if err != nil {
+		return nil, fmt.Errorf("error digging out request body schema: %w", err)
+	}
+
+	responseBody200Schema, err := safelyDigResponseBody200Schema(codegenOperationDefinition)
+	if err != nil {
+		return nil, fmt.Errorf("error digging out response body 200 schema: %w", err)
+	}
+
+	return &OperationDefinition{
+		OperationDefinition:   &codegenOperationDefinition,
+		ModuleName:            moduleName,
+		RequestBodySchema:     requestBodySchema,
+		ResponseBody200Schema: responseBody200Schema,
+	}, nil
+}
+
+var MediaTypeJson = "application/json"
+
 var ErrMissingTags = errors.New("operation definition must specify at least one tag")
 var ErrSpecCannotBeNil = errors.New("operation definition Spec attribute cannot be nil")
 var ErrMalformedSpec = errors.New("operation definition Spec attribute is malformed")
@@ -75,7 +105,14 @@ var ErrMalformedSpecNoRequestBodyJsonMediaType = errors.New("operation definitio
 var Err200ResponseBodyMissing = errors.New("operation definition must define a 200 response body")
 var Err200ResponseBodyNoJsonMediaType = errors.New("operation definition 200 response body is missing application/json response")
 
-var MediaTypeJson = "application/json"
+func safelyDigModuleName(codegenOperationDefinition codegen.OperationDefinition) (string, error) {
+	tags := codegenOperationDefinition.Spec.Tags
+
+	if len(tags) == 0 {
+		return "", ErrMissingTags
+	}
+	return tags[0], nil
+}
 
 func safelyDigRequestBodySchema(codegenOperationDefinition codegen.OperationDefinition) (*openapi3.SchemaRef, error) {
 	var requestBodySchema *openapi3.SchemaRef
@@ -112,43 +149,6 @@ func safelyDigResponseBody200Schema(codegenOperationDefinition codegen.Operation
 	}
 
 	return codegenOperationDefinition.Spec.Responses.Get(200).Value.Content.Get(MediaTypeJson).Schema, nil
-}
-
-func safelyDigModuleName(codegenOperationDefinition codegen.OperationDefinition) (string, error) {
-	tags := codegenOperationDefinition.Spec.Tags
-
-	if len(tags) == 0 {
-		return "", ErrMissingTags
-	}
-	return tags[0], nil
-}
-
-func NewOperationDefinition(codegenOperationDefinition codegen.OperationDefinition) (*OperationDefinition, error) {
-	if codegenOperationDefinition.Spec == nil {
-		return nil, ErrSpecCannotBeNil
-	}
-
-	moduleName, err := safelyDigModuleName(codegenOperationDefinition)
-	if err != nil {
-		return nil, fmt.Errorf("error digging out module name from tags: %w", err)
-	}
-
-	requestBodySchema, err := safelyDigRequestBodySchema(codegenOperationDefinition)
-	if err != nil {
-		return nil, fmt.Errorf("error digging out request body schema: %w", err)
-	}
-
-	responseBody200Schema, err := safelyDigResponseBody200Schema(codegenOperationDefinition)
-	if err != nil {
-		return nil, fmt.Errorf("error digging out response body 200 schema: %w", err)
-	}
-
-	return &OperationDefinition{
-		OperationDefinition:   &codegenOperationDefinition,
-		ModuleName:            moduleName,
-		RequestBodySchema:     requestBodySchema,
-		ResponseBody200Schema: responseBody200Schema,
-	}, nil
 }
 
 type TemplateModels struct {
@@ -206,14 +206,6 @@ type RouteTemplateModel struct {
 	Path          string
 }
 
-// toRackPath converts a path definition as given by OpenAPI spec to something Rack understands.
-// For example "/users/{user_id}" -> "/users/:user_id"
-func toRackPath(codegenPath string) string {
-	re := regexp.MustCompile("{(.*?)}")
-	out := re.ReplaceAllString(codegenPath, ":$1")
-	return out
-}
-
 func (g Generator) GenerateRoutesFileTemplateModel() (RoutesFileTemplateModel, error) {
 	var routeTemplateModels []RouteTemplateModel
 	for _, operationDefinition := range g.OperationDefinitions {
@@ -229,6 +221,14 @@ func (g Generator) GenerateRoutesFileTemplateModel() (RoutesFileTemplateModel, e
 		AppName: g.AppName,
 		Routes:  routeTemplateModels,
 	}, nil
+}
+
+// toRackPath converts a path definition as given by OpenAPI spec to something Rack understands.
+// For example "/users/{user_id}" -> "/users/:user_id"
+func toRackPath(codegenPath string) string {
+	re := regexp.MustCompile("{(.*?)}")
+	out := re.ReplaceAllString(codegenPath, ":$1")
+	return out
 }
 
 type ActionTemplateModel struct {
@@ -296,17 +296,17 @@ func (g Generator) GenerateContractsFileTemplateModel() (ContractsFileTemplateMo
 
 		// injecting the request body attributes
 		if operationDefinition.Spec.RequestBody != nil {
-			requestContract.Attributes = GenerateAttributeDefinitions(operationDefinition.RequestBodySchema)
+			requestContract.Attributes = generateAttributeDefinitions(operationDefinition.RequestBodySchema)
 		}
 
 		// injecting the query & path params
 		for _, pathParam := range operationDefinition.Spec.Parameters {
-			requestContract.Attributes = append(requestContract.Attributes, GenerateAttributeDefinition(pathParam.Value.Name, pathParam.Value.Schema, pathParam.Value.Required))
+			requestContract.Attributes = append(requestContract.Attributes, generateAttributeDefinition(pathParam.Value.Name, pathParam.Value.Schema, pathParam.Value.Required))
 		}
 
 		responseContract := ContractTemplateModel{
 			ContractName: fmt.Sprintf("%sResponseContract", operationDefinition.OperationId),
-			Attributes:   GenerateAttributeDefinitions(operationDefinition.ResponseBody200Schema),
+			Attributes:   generateAttributeDefinitions(operationDefinition.ResponseBody200Schema),
 		}
 
 		contracts = append(contracts, requestContract, responseContract)
@@ -334,7 +334,7 @@ func (g Generator) GenerateSchemasFileTemplateModel() (SchemasFileTemplateModel,
 	for key, value := range g.Swagger.Components.Schemas {
 		schemaTemplateModel := SchemaTemplateModel{
 			SchemaName: key,
-			Attributes: GenerateAttributeDefinitions(value),
+			Attributes: generateAttributeDefinitions(value),
 		}
 
 		schemas = append(schemas, schemaTemplateModel)
@@ -352,17 +352,7 @@ type AttributeDefinition struct {
 	Required         bool
 }
 
-func sortedSchemaRefPropertyKeys(schemaRef *openapi3.SchemaRef) []string {
-	properties := schemaRef.Value.Properties
-	sortedKeys := make([]string, 0)
-	for k, _ := range properties {
-		sortedKeys = append(sortedKeys, k)
-	}
-	sort.Strings(sortedKeys)
-	return sortedKeys
-}
-
-func GenerateAttributeDefinitions(schemaRef *openapi3.SchemaRef) []AttributeDefinition {
+func generateAttributeDefinitions(schemaRef *openapi3.SchemaRef) []AttributeDefinition {
 	if schemaRef == nil {
 		return nil
 	}
@@ -378,14 +368,24 @@ func GenerateAttributeDefinitions(schemaRef *openapi3.SchemaRef) []AttributeDefi
 
 	for _, propertyKey := range sortedKeys {
 		propertyValue := schemaRef.Value.Properties[propertyKey]
-		attributeDefinition := GenerateAttributeDefinition(propertyKey, propertyValue, isInArray(schemaRef.Value.Required, propertyKey))
+		attributeDefinition := generateAttributeDefinition(propertyKey, propertyValue, isInArray(schemaRef.Value.Required, propertyKey))
 		attributeDefinitions = append(attributeDefinitions, attributeDefinition)
 	}
 
 	return attributeDefinitions
 }
 
-func GenerateAttributeDefinition(key string, schemaRef *openapi3.SchemaRef, required bool) AttributeDefinition {
+func sortedSchemaRefPropertyKeys(schemaRef *openapi3.SchemaRef) []string {
+	properties := schemaRef.Value.Properties
+	sortedKeys := make([]string, 0)
+	for k, _ := range properties {
+		sortedKeys = append(sortedKeys, k)
+	}
+	sort.Strings(sortedKeys)
+	return sortedKeys
+}
+
+func generateAttributeDefinition(key string, schemaRef *openapi3.SchemaRef, required bool) AttributeDefinition {
 	attributeDefinition := AttributeDefinition{
 		AttributeName:    key,
 		AttributeType:    "",
@@ -396,7 +396,7 @@ func GenerateAttributeDefinition(key string, schemaRef *openapi3.SchemaRef, requ
 	}
 
 	if isRef(schemaRef) {
-		attributeDefinition.AttributeType = GenerateReferencedSchemaType(schemaRef)
+		attributeDefinition.AttributeType = referencedSchemaType(schemaRef)
 		return attributeDefinition
 	}
 
@@ -410,7 +410,7 @@ func GenerateAttributeDefinition(key string, schemaRef *openapi3.SchemaRef, requ
 		attributeDefinition.Verb = "value"
 	case "array":
 		attributeDefinition.Verb = "array"
-		itemsAttributeDefinition := GenerateAttributeDefinition("", schemaRef.Value.Items, isInArray(schemaRef.Value.Required, key))
+		itemsAttributeDefinition := generateAttributeDefinition("", schemaRef.Value.Items, isInArray(schemaRef.Value.Required, key))
 		attributeDefinition.AttributeType = itemsAttributeDefinition.AttributeType
 		attributeDefinition.NestedAttributes = itemsAttributeDefinition.NestedAttributes
 		attributeDefinition.HasChildren = len(itemsAttributeDefinition.NestedAttributes) > 0
@@ -418,18 +418,18 @@ func GenerateAttributeDefinition(key string, schemaRef *openapi3.SchemaRef, requ
 		attributeDefinition.AttributeType = ":hash"
 		attributeDefinition.Verb = "value"
 		attributeDefinition.HasChildren = true
-		attributeDefinition.NestedAttributes = GenerateAttributeDefinitions(schemaRef)
+		attributeDefinition.NestedAttributes = generateAttributeDefinitions(schemaRef)
 	}
 
 	return attributeDefinition
 }
 
-func GenerateReferencedSchemaType(schemaRef *openapi3.SchemaRef) string {
-	return fmt.Sprintf("Schemas::%s", schemaRef.Value.Title)
-}
-
 func isRef(propertyValue *openapi3.SchemaRef) bool {
 	return propertyValue.Ref != ""
+}
+
+func referencedSchemaType(schemaRef *openapi3.SchemaRef) string {
+	return fmt.Sprintf("Schemas::%s", schemaRef.Value.Title)
 }
 
 func isInArray(arr []string, val string) bool {
