@@ -32,68 +32,21 @@ func mainRun() exitCode {
 		return exitError
 	}
 
-	routesFileTemplateModel, err := g.GenerateRoutesFileTemplateModel()
+	templateModels, err := g.GenerateTemplateModels()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to generate routes file template model: %s\n", err)
-		return exitError
-	}
-
-	actionTemplateModels, err := g.GenerateActionTemplateModels()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to generate action template models: %s\n", err)
-		return exitError
-	}
-
-	serviceTemplateModels, err := g.GenerateServiceTemplateModels()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to generate service template models: %s\n", err)
-		return exitError
-	}
-
-	contractsFileTemplateModel, err := g.GenerateContractsFileTemplateModel()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to generate contracts file template model: %s\n", err)
-		return exitError
-	}
-
-	schemasFileTemplateModel, err := g.GenerateSchemasFileTemplateModel()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to generate schemas file template model: %s\n", err)
+		fmt.Fprintf(os.Stderr, "failed to generate template models generator: %s\n", err)
 		return exitError
 	}
 
 	w, err := NewWriter(config.outputDir)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to create a new writer: %s\n", err)
-	}
-
-	err = w.WriteRoutesFileFromModel(routesFileTemplateModel)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to write routes file: %s\n", err)
 		return exitError
 	}
 
-	err = w.WriteActionFilesFromModels(actionTemplateModels)
+	err = w.WriteFilesFromTemplateModels(templateModels)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to write action files: %s\n", err)
-		return exitError
-	}
-
-	err = w.WriteServiceFilesFromModels(serviceTemplateModels)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to write service files: %s\n", err)
-		return exitError
-	}
-
-	err = w.WriteContractsFileFromModel(contractsFileTemplateModel)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to write contracts file: %s\n", err)
-		return exitError
-	}
-
-	err = w.WriteSchemasFileFromModel(schemasFileTemplateModel)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to write schemas file: %s\n", err)
+		fmt.Fprintf(os.Stderr, "failed to write files from template models: %s\n", err)
 		return exitError
 	}
 

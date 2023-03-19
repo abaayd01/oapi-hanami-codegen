@@ -18,7 +18,7 @@ type Generator struct {
 }
 
 func NewGenerator(inputFilePath string, appName string) (*Generator, error) {
-	swagger, err := LoadSwagger(inputFilePath)
+	swagger, err := loadSwagger(inputFilePath)
 	if err != nil {
 		return nil, err
 	}
@@ -50,7 +50,7 @@ func NewGenerator(inputFilePath string, appName string) (*Generator, error) {
 	}, nil
 }
 
-func LoadSwagger(filePath string) (*openapi3.T, error) {
+func loadSwagger(filePath string) (*openapi3.T, error) {
 	swagger, err := util.LoadSwagger(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("error loading swagger spec: %w", err)
@@ -155,6 +155,49 @@ func NewOperationDefinition(codegenOperationDefinition codegen.OperationDefiniti
 		ModuleName:            moduleName,
 		RequestBodySchema:     requestBodySchema,
 		ResponseBody200Schema: responseBody200Schema,
+	}, nil
+}
+
+type TemplateModels struct {
+	RoutesFileTemplateModel    RoutesFileTemplateModel
+	ActionTemplateModels       []ActionTemplateModel
+	ServiceTemplateModels      []ServiceTemplateModel
+	ContractsFileTemplateModel ContractsFileTemplateModel
+	SchemasFileTemplateModel   SchemasFileTemplateModel
+}
+
+func (g Generator) GenerateTemplateModels() (*TemplateModels, error) {
+	routesFileTemplateModel, err := g.GenerateRoutesFileTemplateModel()
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate routes file template model: %w\n", err)
+	}
+
+	actionTemplateModels, err := g.GenerateActionTemplateModels()
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate action template models: %w\n", err)
+	}
+
+	serviceTemplateModels, err := g.GenerateServiceTemplateModels()
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate service template models: %w\n", err)
+	}
+
+	contractsFileTemplateModel, err := g.GenerateContractsFileTemplateModel()
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate contracts file template models: %w\n", err)
+	}
+
+	schemasFileTemplateModel, err := g.GenerateSchemasFileTemplateModel()
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate schemas file template models: %w\n", err)
+	}
+
+	return &TemplateModels{
+		RoutesFileTemplateModel:    routesFileTemplateModel,
+		ActionTemplateModels:       actionTemplateModels,
+		ServiceTemplateModels:      serviceTemplateModels,
+		ContractsFileTemplateModel: contractsFileTemplateModel,
+		SchemasFileTemplateModel:   schemasFileTemplateModel,
 	}, nil
 }
 

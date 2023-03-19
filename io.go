@@ -51,6 +51,36 @@ func LoadTemplates() (*template.Template, error) {
 	)
 }
 
+func (w Writer) WriteFilesFromTemplateModels(templateModels *TemplateModels) error {
+	err := w.WriteRoutesFileFromModel(templateModels.RoutesFileTemplateModel)
+	if err != nil {
+		return fmt.Errorf("failed to write routes file: %w\n", err)
+
+	}
+
+	err = w.WriteActionFilesFromModels(templateModels.ActionTemplateModels)
+	if err != nil {
+		return fmt.Errorf("failed to write action files: %w\n", err)
+	}
+
+	err = w.WriteServiceFilesFromModels(templateModels.ServiceTemplateModels)
+	if err != nil {
+		return fmt.Errorf("failed to write service files: %w\n", err)
+	}
+
+	err = w.WriteContractsFileFromModel(templateModels.ContractsFileTemplateModel)
+	if err != nil {
+		return fmt.Errorf("failed to write contracts file: %w\n", err)
+	}
+
+	err = w.WriteSchemasFileFromModel(templateModels.SchemasFileTemplateModel)
+	if err != nil {
+		return fmt.Errorf("failed to write schemas file: %w\n", err)
+	}
+
+	return nil
+}
+
 func (w Writer) WriteRoutesFileFromModel(model RoutesFileTemplateModel) error {
 	buf, err := w.ExecuteRoutesFileTemplate(model)
 	if err != nil {
