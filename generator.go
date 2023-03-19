@@ -7,6 +7,7 @@ import (
 	"github.com/deepmap/oapi-codegen/pkg/util"
 	"github.com/getkin/kin-openapi/openapi3"
 	"regexp"
+	"sort"
 	"text/template"
 )
 
@@ -359,12 +360,32 @@ type AttributeDefinition struct {
 	Required         bool
 }
 
+func sortedSchemaRefPropertyKeys(schemaRef *openapi3.SchemaRef) []string {
+	properties := schemaRef.Value.Properties
+	sortedKeys := make([]string, 0)
+	for k, _ := range properties {
+		sortedKeys = append(sortedKeys, k)
+	}
+	sort.Strings(sortedKeys)
+	return sortedKeys
+}
+
 func GenerateAttributeDefinitions(schemaRef *openapi3.SchemaRef) []AttributeDefinition {
 	if schemaRef == nil {
 		return nil
 	}
+
 	var attributeDefinitions []AttributeDefinition
-	for propertyKey, propertyValue := range schemaRef.Value.Properties {
+
+	// Want to sort the keys to make sure they come out in a consistent order, because
+	// I don't think openapi3 makes guarantees about the order they are in openapi3.Schemas map,
+	// which causes flaky tests.
+	//
+	// Sorts alphabetically.
+	sortedKeys := sortedSchemaRefPropertyKeys(schemaRef)
+
+	for _, propertyKey := range sortedKeys {
+		propertyValue := schemaRef.Value.Properties[propertyKey]
 		attributeDefinition := GenerateAttributeDefinition(propertyKey, propertyValue, isInArray(schemaRef.Value.Required, propertyKey))
 		attributeDefinitions = append(attributeDefinitions, attributeDefinition)
 	}

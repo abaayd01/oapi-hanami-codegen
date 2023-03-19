@@ -147,8 +147,143 @@ func TestGenerator_GenerateContractsFileTemplateModel(t *testing.T) {
 	}
 
 	expected := ContractsFileTemplateModel{
-		AppName:   "TestApp",
-		Contracts: nil, // todo fill this out properly
+		AppName: "TestApp",
+		Contracts: []ContractTemplateModel{
+			{
+				ContractName: "GetBooksRequestContract",
+				Attributes:   nil,
+			},
+			{
+				ContractName: "GetBooksResponseContract",
+				Attributes: []AttributeDefinition{
+					{
+						AttributeName: "books",
+						AttributeType: ":hash",
+						Verb:          "array",
+						HasChildren:   true,
+						NestedAttributes: []AttributeDefinition{
+							{
+								AttributeName:    "author",
+								AttributeType:    ":string",
+								Verb:             "value",
+								HasChildren:      false,
+								NestedAttributes: nil,
+								Required:         false,
+							},
+							{
+								AttributeName:    "title",
+								AttributeType:    ":string",
+								Verb:             "value",
+								HasChildren:      false,
+								NestedAttributes: nil,
+								Required:         false,
+							},
+						},
+						Required: false,
+					},
+				},
+			},
+			{
+				ContractName: "GetBookByIdRequestContract",
+				Attributes:   nil,
+			},
+			{
+				ContractName: "GetBookByIdResponseContract",
+				Attributes: []AttributeDefinition{
+					{
+						AttributeName:    "author",
+						AttributeType:    ":string",
+						Verb:             "value",
+						HasChildren:      false,
+						NestedAttributes: nil,
+						Required:         true,
+					},
+					{
+						AttributeName: "avatar",
+						AttributeType: ":hash",
+						Verb:          "value",
+						HasChildren:   true,
+						NestedAttributes: []AttributeDefinition{
+							{
+								AttributeName:    "id",
+								AttributeType:    ":integer",
+								Verb:             "value",
+								HasChildren:      false,
+								NestedAttributes: nil,
+								Required:         false,
+							},
+							{
+								AttributeName:    "profileImageUrl",
+								AttributeType:    ":string",
+								Verb:             "value",
+								HasChildren:      false,
+								NestedAttributes: nil,
+								Required:         false,
+							},
+						},
+						Required: false,
+					},
+					{
+						AttributeName: "reviews",
+						AttributeType: ":hash",
+						Verb:          "array",
+						HasChildren:   true,
+						NestedAttributes: []AttributeDefinition{
+							{
+								AttributeName:    "rating",
+								AttributeType:    ":integer",
+								Verb:             "value",
+								HasChildren:      false,
+								NestedAttributes: nil,
+								Required:         false,
+							},
+							{
+								AttributeName:    "text",
+								AttributeType:    ":string",
+								Verb:             "value",
+								HasChildren:      false,
+								NestedAttributes: nil,
+								Required:         true,
+							},
+							{
+								AttributeName: "user",
+								AttributeType: ":hash",
+								Verb:          "value",
+								HasChildren:   true,
+								NestedAttributes: []AttributeDefinition{
+									{
+										AttributeName:    "id",
+										AttributeType:    ":string",
+										Verb:             "value",
+										HasChildren:      false,
+										NestedAttributes: nil,
+										Required:         false,
+									},
+									{
+										AttributeName:    "name",
+										AttributeType:    ":string",
+										Verb:             "value",
+										HasChildren:      false,
+										NestedAttributes: nil,
+										Required:         false,
+									},
+								},
+								Required: true,
+							},
+						},
+						Required: true,
+					},
+					{
+						AttributeName:    "title",
+						AttributeType:    ":string",
+						Verb:             "value",
+						HasChildren:      false,
+						NestedAttributes: nil,
+						Required:         true,
+					},
+				},
+			},
+		},
 	}
 
 	assert.Equal(t, expected, model)
