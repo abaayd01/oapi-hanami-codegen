@@ -3,3 +3,6 @@
 .vscode/
 bin/
 gen/
+out/
+*.iml
+oapi-hanami-codegen
