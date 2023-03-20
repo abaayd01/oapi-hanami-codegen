@@ -151,10 +151,12 @@ func TestGenerator_GenerateContractsFileTemplateModel(t *testing.T) {
 		Contracts: []ContractTemplateModel{
 			{
 				ContractName: "GetBooksRequestContract",
+				BaseClass:    "Hanami::Action::Params",
 				Attributes:   nil,
 			},
 			{
 				ContractName: "GetBooksResponseContract",
+				BaseClass:    "Dry::Validation::Contract",
 				Attributes: []AttributeDefinition{
 					{
 						AttributeName: "books",
@@ -185,10 +187,12 @@ func TestGenerator_GenerateContractsFileTemplateModel(t *testing.T) {
 			},
 			{
 				ContractName: "GetBookByIdRequestContract",
+				BaseClass:    "Hanami::Action::Params",
 				Attributes:   nil,
 			},
 			{
 				ContractName: "GetBookByIdResponseContract",
+				BaseClass:    "Dry::Validation::Contract",
 				Attributes: []AttributeDefinition{
 					{
 						AttributeName:    "author",

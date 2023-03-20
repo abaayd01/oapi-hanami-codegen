@@ -279,6 +279,7 @@ func (g Generator) GenerateServiceTemplateModels() ([]ServiceTemplateModel, erro
 
 type ContractTemplateModel struct {
 	ContractName string
+	BaseClass    string
 	Attributes   []AttributeDefinition
 }
 
@@ -292,6 +293,7 @@ func (g Generator) GenerateContractsFileTemplateModel() (ContractsFileTemplateMo
 	for _, operationDefinition := range g.OperationDefinitions {
 		requestContract := ContractTemplateModel{
 			ContractName: fmt.Sprintf("%sRequestContract", operationDefinition.OperationId),
+			BaseClass:    "Hanami::Action::Params",
 		}
 
 		// injecting the request body attributes
@@ -306,6 +308,7 @@ func (g Generator) GenerateContractsFileTemplateModel() (ContractsFileTemplateMo
 
 		responseContract := ContractTemplateModel{
 			ContractName: fmt.Sprintf("%sResponseContract", operationDefinition.OperationId),
+			BaseClass:    "Dry::Validation::Contract",
 			Attributes:   generateAttributeDefinitions(operationDefinition.ResponseBody200Schema),
 		}
 
