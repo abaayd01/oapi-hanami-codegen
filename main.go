@@ -38,7 +38,7 @@ func mainRun() exitCode {
 		return exitError
 	}
 
-	w, err := NewWriter(config.outputDir)
+	w, err := NewWriter(config.outputDir, config.appName)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to create a new writer: %s\n", err)
 		return exitError

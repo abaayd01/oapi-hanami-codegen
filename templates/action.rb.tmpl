@@ -8,17 +8,12 @@ module {{.AppName}}
           service_result = {{.ActionName}}Service.new.call(request.params.to_h)
 
           if service_result.failure?
-            Hanami.logger.error "service result failure"
-            response.body = "internal server error"
-            return
+            raise StandardError
           end
 
           response_body_validation_result = Contracts::{{.ActionName}}ResponseContract.new.call(service_result.value!.to_h)
           if response_body_validation_result.failure?
-            Hanami.logger.error "response body validation error"
-            Hanami.logger.error response_body_validation_result.errors.to_h
-            response.body = "internal server error"
-            return
+            raise StandardError
           end
 
           response.body = response_body_validation_result.values.to_h.to_json

@@ -16,17 +16,19 @@ import (
 var templatesFS embed.FS
 var templatesFilePath = "templates"
 var routesTemplateFileName = "routes.rb.tmpl"
+var baseActionTemplateFileName = "base_action.rb.tmpl"
 var actionTemplateFileName = "action.rb.tmpl"
 var serviceTemplateFileName = "service.rb.tmpl"
 var contractsTemplateFileName = "contracts.rb.tmpl"
 var schemasTemplateFileName = "schemas.rb.tmpl"
 
 type Writer struct {
+	AppName   string
 	OutputDir string
 	Templates *template.Template
 }
 
-func NewWriter(outputDir string) (*Writer, error) {
+func NewWriter(outputDir string, appName string) (*Writer, error) {
 	trimmedOutputDir := strings.Trim(outputDir, "/")
 	templates, err := loadTemplates()
 	if err != nil {
@@ -34,6 +36,7 @@ func NewWriter(outputDir string) (*Writer, error) {
 	}
 
 	return &Writer{
+		AppName:   appName,
 		OutputDir: trimmedOutputDir,
 		Templates: templates,
 	}, nil
@@ -56,6 +59,11 @@ func (w Writer) WriteFilesFromTemplateModels(templateModels *TemplateModels) err
 	if err != nil {
 		return fmt.Errorf("failed to write routes file: %w\n", err)
 
+	}
+
+	err = w.WriteBaseActionFile()
+	if err != nil {
+		return fmt.Errorf("failed to write base action file: %w\n", err)
 	}
 
 	err = w.WriteActionFilesFromModels(templateModels.ActionTemplateModels)
@@ -100,6 +108,14 @@ func (w Writer) WriteRoutesFile(data *bytes.Buffer) error {
 		return err
 	}
 	return writeFile(w.OutputDir+"/config/routes.rb", data)
+}
+
+func (w Writer) WriteBaseActionFile() error {
+	data, err := executeTemplate(w.Templates, baseActionTemplateFileName, map[string]string{"AppName": w.AppName})
+	if err != nil {
+		return fmt.Errorf("could not execute action_base.rb.tmpl: %w\n", err)
+	}
+	return writeFile(w.OutputDir+"/base_action.rb", data)
 }
 
 func (w Writer) WriteActionFilesFromModels(actionTemplateModels []ActionTemplateModel) error {
