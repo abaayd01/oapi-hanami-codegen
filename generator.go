@@ -263,7 +263,7 @@ type ServiceTemplateModel struct {
 func NewServiceTemplateModel(appName string, operationDefinition OperationDefinition) ServiceTemplateModel {
 	return ServiceTemplateModel{
 		AppName:     appName,
-		ServiceName: fmt.Sprintf("%sService", operationDefinition.OperationId),
+		ServiceName: fmt.Sprintf("%s", operationDefinition.OperationId),
 		ModuleName:  operationDefinition.ModuleName,
 	}
 }

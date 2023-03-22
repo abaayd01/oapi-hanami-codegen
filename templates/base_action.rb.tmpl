@@ -11,11 +11,13 @@ module {{.AppName}}
 
     ForbiddenError = Class.new(StandardError)
     NotFoundError = Class.new(StandardError)
+    BadResponseShapeError = Class.new(StandardError)
 
     # Exception handling
     config.handle_exception ForbiddenError => :handle_forbidden
     config.handle_exception StandardError => :handle_standard_error
     config.handle_exception NotFoundError => :handle_not_found
+    config.handle_exception BadResponseShapeError => :handle_standard_error
 
     private
 

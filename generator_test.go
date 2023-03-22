@@ -122,12 +122,12 @@ func TestGenerator_GenerateServiceTemplateModels(t *testing.T) {
 	expectedServiceTemplateModels := []ServiceTemplateModel{
 		{
 			AppName:     "TestApp",
-			ServiceName: "GetBookByIdService",
+			ServiceName: "GetBookById",
 			ModuleName:  "books",
 		},
 		{
 			AppName:     "TestApp",
-			ServiceName: "GetBooksService",
+			ServiceName: "GetBooks",
 			ModuleName:  "books",
 		},
 	}

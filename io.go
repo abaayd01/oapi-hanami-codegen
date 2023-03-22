@@ -175,7 +175,7 @@ func (w Writer) ExecuteServiceFileTemplate(model ServiceTemplateModel) (*bytes.B
 }
 
 func (w Writer) WriteServiceFile(model ServiceTemplateModel, data *bytes.Buffer) error {
-	parentDir := fmt.Sprintf("%s/actions/%s/", w.OutputDir, toSnake(model.ModuleName))
+	parentDir := fmt.Sprintf("%s/services/%s/", w.OutputDir, toSnake(model.ModuleName))
 	err := os.MkdirAll(parentDir, os.ModePerm)
 	if err != nil {
 		return fmt.Errorf("error creating parent directory %s: %w", parentDir, err)
@@ -253,6 +253,14 @@ func (w Writer) createActionsDirIfNotExists() error {
 	err := os.MkdirAll(w.OutputDir+"/actions/", os.ModePerm)
 	if err != nil {
 		return fmt.Errorf("error creating directory %s/actions: %w", w.OutputDir, err)
+	}
+	return nil
+}
+
+func (w Writer) createServicesDirIfNotExists() error {
+	err := os.MkdirAll(w.OutputDir+"/services/", os.ModePerm)
+	if err != nil {
+		return fmt.Errorf("error creating directory %s/services: %w", w.OutputDir, err)
 	}
 	return nil
 }
