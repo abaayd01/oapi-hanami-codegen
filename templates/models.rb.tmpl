@@ -1,6 +1,0 @@
-{{range .}}
-class {{.ClassName}} < Dry::Struct
-    {{range .Attributes}}attribute :{{.Name}}, {{.DryType}}
-    {{end}}
-end
-{{end}}
