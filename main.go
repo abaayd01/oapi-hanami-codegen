@@ -26,7 +26,7 @@ func mainRun() exitCode {
 		return exitError
 	}
 
-	g, err := NewGenerator(config.inputFilePath, config.appName)
+	g, err := NewGenerator(config.inputFilePath, config.appName, config.sliceName)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to create generator: %s\n", err)
 		return exitError
@@ -56,12 +56,14 @@ func mainRun() exitCode {
 type args struct {
 	inputFilePath string
 	appName       string
+	sliceName     string
 	outputDir     string
 }
 
 func parseArgs() (*args, error) {
 	inputFilePtr := flag.String("inputFile", "", "file path of OpenAPI spec")
 	appNamePtr := flag.String("appName", "HanamiApp", "name of the top-level Hanami app module")
+	sliceNamePtr := flag.String("sliceName", "API", "name of the slice you want to put your generated actions in")
 	outputDirPtr := flag.String("outputDir", "gen", "path to output directory")
 
 	flag.Parse()
@@ -73,6 +75,7 @@ func parseArgs() (*args, error) {
 	return &args{
 		inputFilePath: *inputFilePtr,
 		appName:       *appNamePtr,
+		sliceName:     *sliceNamePtr,
 		outputDir:     *outputDirPtr,
 	}, nil
 }

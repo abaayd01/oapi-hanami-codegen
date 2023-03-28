@@ -1,4 +1,4 @@
-module {{.AppName}}
+module {{.SliceName}}
   module Actions
     module {{.ModuleName | ucFirst}}
       class {{.ActionName}} < {{.AppName}}::Action
@@ -13,7 +13,7 @@ module {{.AppName}}
           end
 
           response_body_validation_result = Contracts::{{.ActionName}}ResponseContract.new.call(service_result.value!.to_h)
-          if response_body_validation_esult.failure?
+          if response_body_validation_result.failure?
             raise BadResponseShapeError
           end
 

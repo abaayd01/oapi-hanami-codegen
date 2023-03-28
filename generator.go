@@ -12,11 +12,12 @@ import (
 
 type Generator struct {
 	AppName              string
+	SliceName            string // only support a single slice for now
 	OperationDefinitions []OperationDefinition
 	Swagger              *openapi3.T
 }
 
-func NewGenerator(inputFilePath string, appName string) (*Generator, error) {
+func NewGenerator(inputFilePath string, appName string, sliceName string) (*Generator, error) {
 	swagger, err := loadSwagger(inputFilePath)
 	if err != nil {
 		return nil, err
@@ -38,6 +39,7 @@ func NewGenerator(inputFilePath string, appName string) (*Generator, error) {
 
 	return &Generator{
 		AppName:              appName,
+		SliceName:            sliceName,
 		OperationDefinitions: operationDefinitions,
 		Swagger:              swagger,
 	}, nil
@@ -233,13 +235,15 @@ func toRackPath(codegenPath string) string {
 
 type ActionTemplateModel struct {
 	AppName    string
+	SliceName  string
 	ActionName string
 	ModuleName string
 }
 
-func NewActionTemplateModel(appName string, operationDefinition OperationDefinition) ActionTemplateModel {
+func NewActionTemplateModel(appName string, sliceName string, operationDefinition OperationDefinition) ActionTemplateModel {
 	return ActionTemplateModel{
 		AppName:    appName,
+		SliceName:  sliceName,
 		ActionName: operationDefinition.OperationId,
 		ModuleName: operationDefinition.ModuleName,
 	}
@@ -248,7 +252,7 @@ func NewActionTemplateModel(appName string, operationDefinition OperationDefinit
 func (g Generator) GenerateActionTemplateModels() ([]ActionTemplateModel, error) {
 	var actionTemplateModels []ActionTemplateModel
 	for _, operationDefinition := range g.OperationDefinitions {
-		actionTemplateModels = append(actionTemplateModels, NewActionTemplateModel(g.AppName, operationDefinition))
+		actionTemplateModels = append(actionTemplateModels, NewActionTemplateModel(g.AppName, g.SliceName, operationDefinition))
 	}
 
 	return actionTemplateModels, nil
@@ -256,13 +260,15 @@ func (g Generator) GenerateActionTemplateModels() ([]ActionTemplateModel, error)
 
 type ServiceTemplateModel struct {
 	AppName     string
+	SliceName   string
 	ServiceName string
 	ModuleName  string
 }
 
-func NewServiceTemplateModel(appName string, operationDefinition OperationDefinition) ServiceTemplateModel {
+func NewServiceTemplateModel(appName string, sliceName string, operationDefinition OperationDefinition) ServiceTemplateModel {
 	return ServiceTemplateModel{
 		AppName:     appName,
+		SliceName:   sliceName,
 		ServiceName: fmt.Sprintf("%s", operationDefinition.OperationId),
 		ModuleName:  operationDefinition.ModuleName,
 	}
@@ -271,7 +277,7 @@ func NewServiceTemplateModel(appName string, operationDefinition OperationDefini
 func (g Generator) GenerateServiceTemplateModels() ([]ServiceTemplateModel, error) {
 	var serviceTemplateModels []ServiceTemplateModel
 	for _, operationDefinition := range g.OperationDefinitions {
-		serviceTemplateModels = append(serviceTemplateModels, NewServiceTemplateModel(g.AppName, operationDefinition))
+		serviceTemplateModels = append(serviceTemplateModels, NewServiceTemplateModel(g.AppName, g.SliceName, operationDefinition))
 	}
 
 	return serviceTemplateModels, nil
@@ -285,6 +291,7 @@ type ContractTemplateModel struct {
 
 type ContractsFileTemplateModel struct {
 	AppName   string
+	SliceName string
 	Contracts []ContractTemplateModel
 }
 
@@ -317,6 +324,7 @@ func (g Generator) GenerateContractsFileTemplateModel() (ContractsFileTemplateMo
 
 	return ContractsFileTemplateModel{
 		AppName:   g.AppName,
+		SliceName: g.SliceName,
 		Contracts: contracts,
 	}, nil
 }
@@ -327,8 +335,9 @@ type SchemaTemplateModel struct {
 }
 
 type SchemasFileTemplateModel struct {
-	AppName string
-	Schemas []SchemaTemplateModel
+	AppName   string
+	SliceName string
+	Schemas   []SchemaTemplateModel
 }
 
 func (g Generator) GenerateSchemasFileTemplateModel() (SchemasFileTemplateModel, error) {
@@ -343,7 +352,11 @@ func (g Generator) GenerateSchemasFileTemplateModel() (SchemasFileTemplateModel,
 		schemas = append(schemas, schemaTemplateModel)
 	}
 
-	return SchemasFileTemplateModel{AppName: g.AppName, Schemas: schemas}, nil
+	return SchemasFileTemplateModel{
+		AppName:   g.AppName,
+		SliceName: g.SliceName,
+		Schemas:   schemas,
+	}, nil
 }
 
 type AttributeDefinition struct {

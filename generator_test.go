@@ -45,12 +45,12 @@ func Test_toRackPath(t *testing.T) {
 }
 
 func TestNewGenerator_MissingTags(t *testing.T) {
-	_, err := NewGenerator("fixtures/test_spec_missing_tags.yaml", "TestApp")
+	_, err := NewGenerator("fixtures/test_spec_missing_tags.yaml", "TestApp", "API")
 	assert.ErrorContains(t, err, ErrMissingTags.Error())
 }
 
 func TestGenerator_GenerateRoutesFileTemplateModel(t *testing.T) {
-	g, err := NewGenerator("fixtures/test_spec.yaml", "TestApp")
+	g, err := NewGenerator("fixtures/test_spec.yaml", "TestApp", "API")
 	if err != nil {
 		t.Fatalf("error creating generator: %s\n", err)
 	}
@@ -82,7 +82,7 @@ func TestGenerator_GenerateRoutesFileTemplateModel(t *testing.T) {
 }
 
 func TestGenerator_GenerateActionTemplateModels(t *testing.T) {
-	g, err := NewGenerator("fixtures/test_spec.yaml", "TestApp")
+	g, err := NewGenerator("fixtures/test_spec.yaml", "TestApp", "API")
 	if err != nil {
 		t.Fatalf("error creating generator: %s\n", err)
 	}
@@ -95,11 +95,13 @@ func TestGenerator_GenerateActionTemplateModels(t *testing.T) {
 	expectedActionTemplateModels := []ActionTemplateModel{
 		{
 			AppName:    "TestApp",
+			SliceName:  "API",
 			ActionName: "GetBookById",
 			ModuleName: "books",
 		},
 		{
 			AppName:    "TestApp",
+			SliceName:  "API",
 			ActionName: "GetBooks",
 			ModuleName: "books",
 		},
@@ -109,7 +111,7 @@ func TestGenerator_GenerateActionTemplateModels(t *testing.T) {
 }
 
 func TestGenerator_GenerateServiceTemplateModels(t *testing.T) {
-	g, err := NewGenerator("fixtures/test_spec.yaml", "TestApp")
+	g, err := NewGenerator("fixtures/test_spec.yaml", "TestApp", "API")
 	if err != nil {
 		t.Fatalf("error creating generator: %s\n", err)
 	}
@@ -122,11 +124,13 @@ func TestGenerator_GenerateServiceTemplateModels(t *testing.T) {
 	expectedServiceTemplateModels := []ServiceTemplateModel{
 		{
 			AppName:     "TestApp",
+			SliceName:   "API",
 			ServiceName: "GetBookById",
 			ModuleName:  "books",
 		},
 		{
 			AppName:     "TestApp",
+			SliceName:   "API",
 			ServiceName: "GetBooks",
 			ModuleName:  "books",
 		},
@@ -136,7 +140,7 @@ func TestGenerator_GenerateServiceTemplateModels(t *testing.T) {
 }
 
 func TestGenerator_GenerateContractsFileTemplateModel(t *testing.T) {
-	g, err := NewGenerator("fixtures/test_spec.yaml", "TestApp")
+	g, err := NewGenerator("fixtures/test_spec.yaml", "TestApp", "API")
 	if err != nil {
 		t.Fatalf("error creating generator: %s\n", err)
 	}
@@ -147,7 +151,8 @@ func TestGenerator_GenerateContractsFileTemplateModel(t *testing.T) {
 	}
 
 	expected := ContractsFileTemplateModel{
-		AppName: "TestApp",
+		AppName:   "TestApp",
+		SliceName: "API",
 		Contracts: []ContractTemplateModel{
 			{
 				ContractName: "GetBooksRequestContract",
@@ -294,7 +299,7 @@ func TestGenerator_GenerateContractsFileTemplateModel(t *testing.T) {
 }
 
 func TestGenerator_GenerateSchemasFileTemplateModel(t *testing.T) {
-	g, err := NewGenerator("fixtures/test_spec.yaml", "TestApp")
+	g, err := NewGenerator("fixtures/test_spec.yaml", "TestApp", "API")
 	if err != nil {
 		t.Fatalf("error creating generator: %s\n", err)
 	}
@@ -305,8 +310,9 @@ func TestGenerator_GenerateSchemasFileTemplateModel(t *testing.T) {
 	}
 
 	expected := SchemasFileTemplateModel{
-		AppName: "TestApp",
-		Schemas: nil,
+		AppName:   "TestApp",
+		SliceName: "API",
+		Schemas:   nil,
 	}
 
 	assert.Equal(t, expected, schemasFileTemplateModel)
