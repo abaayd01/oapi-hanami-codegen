@@ -1,7 +1,7 @@
 module {{.SliceName}}
   module Actions
     module {{.ModuleName | ucFirst}}
-      class {{.ActionName}} < {{.AppName}}::Action
+      class {{.ActionName}} < {{.SliceName}}::Action
         include Deps[service: "services.{{.ModuleName | toSnake}}.{{.ActionName | toSnake}}"]
         params Contracts::{{.ActionName}}RequestContract
 

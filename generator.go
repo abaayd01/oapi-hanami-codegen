@@ -197,8 +197,9 @@ func (g Generator) GenerateTemplateModels() (*TemplateModels, error) {
 }
 
 type RoutesFileTemplateModel struct {
-	AppName string
-	Routes  []RouteTemplateModel
+	AppName   string
+	SliceName string
+	Routes    []RouteTemplateModel
 }
 
 type RouteTemplateModel struct {
@@ -220,8 +221,9 @@ func (g Generator) GenerateRoutesFileTemplateModel() (RoutesFileTemplateModel, e
 	}
 
 	return RoutesFileTemplateModel{
-		AppName: g.AppName,
-		Routes:  routeTemplateModels,
+		AppName:   g.AppName,
+		SliceName: g.SliceName,
+		Routes:    routeTemplateModels,
 	}, nil
 }
 

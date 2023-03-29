@@ -1,6 +1,8 @@
 module {{.AppName}}
-    class Routes < Hanami::Routes
-        {{range .Routes}}{{.Method | lower}} "{{.Path}}", to: "{{.ModuleName}}.{{.OperationName | toSnake}}"
-        {{end}}
+  class Routes < Hanami::Routes
+    slice :{{.SliceName | lower}}, at: "/{{.SliceName | lower}}" do
+      {{range .Routes}}{{.Method | lower}} "{{.Path}}", to: "{{.ModuleName}}.{{.OperationName | toSnake}}"
+      {{end}}
     end
+  end
 end
