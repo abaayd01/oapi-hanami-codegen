@@ -138,19 +138,25 @@ func safelyDigRequestBodySchema(codegenOperationDefinition codegen.OperationDefi
 }
 
 func safelyDigResponseBody200Schema(codegenOperationDefinition codegen.OperationDefinition) (*openapi3.SchemaRef, error) {
-	if codegenOperationDefinition.Spec.Responses.Get(200) == nil {
+	response := codegenOperationDefinition.Spec.Responses.Get(200)
+
+	if response == nil {
+		response = codegenOperationDefinition.Spec.Responses.Get(201)
+	}
+
+	if response == nil {
 		return nil, Err200ResponseBodyMissing
 	}
 
-	if codegenOperationDefinition.Spec.Responses.Get(200).Value == nil {
+	if response.Value == nil {
 		return nil, ErrMalformedSpec
 	}
 
-	if codegenOperationDefinition.Spec.Responses.Get(200).Value.Content.Get(MediaTypeJson) == nil {
+	if response.Value.Content.Get(MediaTypeJson) == nil {
 		return nil, Err200ResponseBodyNoJsonMediaType
 	}
 
-	return codegenOperationDefinition.Spec.Responses.Get(200).Value.Content.Get(MediaTypeJson).Schema, nil
+	return response.Value.Content.Get(MediaTypeJson).Schema, nil
 }
 
 type TemplateModels struct {
