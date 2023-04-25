@@ -421,8 +421,13 @@ func generateAttributeDefinition(key string, schemaRef *openapi3.SchemaRef, requ
 	propertyType := schemaRef.Value.Type
 	switch propertyType {
 	case "string":
-		attributeDefinition.AttributeType = ":string"
 		attributeDefinition.Verb = "value"
+
+		if schemaRef.Value.Format == "uuid" {
+			attributeDefinition.AttributeType = ":uuid_v4?"
+		} else {
+			attributeDefinition.AttributeType = ":string"
+		}
 	case "integer":
 		attributeDefinition.AttributeType = ":integer"
 		attributeDefinition.Verb = "value"
